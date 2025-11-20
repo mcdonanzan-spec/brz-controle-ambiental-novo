@@ -24,8 +24,8 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 };
 
 const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
-    const size = 50; // Slightly smaller for mobile balance
-    const strokeWidth = 4;
+    const size = 40; 
+    const strokeWidth = 3;
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
@@ -41,7 +41,7 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
         <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
             <svg className="absolute" width={size} height={size}>
                 <circle
-                    className="text-gray-200"
+                    className="text-gray-100"
                     stroke="currentColor"
                     strokeWidth={strokeWidth}
                     fill="transparent"
@@ -62,7 +62,7 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
                     cy={size / 2}
                 />
             </svg>
-            <span className={`text-sm font-bold ${getColor(score)}`}>{score}</span>
+            <span className={`text-xs font-bold ${getColor(score)}`}>{score}</span>
         </div>
     );
 };
@@ -89,72 +89,79 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
   return (
     <div className="space-y-6 animate-fade-in pb-20">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <button onClick={onBack} className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-1">
-                    <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                    Voltar
-                </button>
-                <h1 className="text-2xl font-bold text-gray-800 leading-tight">{project.name}</h1>
-                <p className="text-sm text-gray-500">{project.location}</p>
+        <div className="bg-white p-4 -m-4 mb-2 shadow-sm md:bg-transparent md:shadow-none md:m-0 md:p-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <button onClick={onBack} className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-1">
+                        <ArrowLeftIcon className="h-4 w-4 mr-1" />
+                        Voltar
+                    </button>
+                    <h1 className="text-2xl font-bold text-gray-800 leading-tight">{project.name}</h1>
+                    <p className="text-sm text-gray-500">{project.location}</p>
+                </div>
+                
+                {canCreateOrEdit && (
+                    <button
+                    onClick={() => (latestReport && !isLatestReportCompleted) ? onEditReportCategory(latestReport, 'massa') : onNewReport()}
+                    className="w-full md:w-auto flex items-center justify-center bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300"
+                    >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    {(latestReport && !isLatestReportCompleted) ? 'Continuar Inspeção' : 'Nova Inspeção'}
+                    </button>
+                )}
             </div>
-            
-            {canCreateOrEdit && (
-                <button
-                  onClick={() => (latestReport && !isLatestReportCompleted) ? onEditReportCategory(latestReport, 'massa') : onNewReport()}
-                  className="w-full md:w-auto flex items-center justify-center bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300"
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  {(latestReport && !isLatestReportCompleted) ? 'Continuar' : 'Nova Inspeção'}
-                </button>
-            )}
         </div>
       
         { !latestReport ? (
-            <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-dashed border-gray-300">
+            <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-dashed border-gray-300 mx-auto max-w-lg">
+                <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <DocumentCheckIcon className="h-8 w-8 text-gray-400"/>
+                </div>
                 <p className="text-gray-600 font-semibold text-lg">Nenhuma inspeção realizada.</p>
-                {canCreateOrEdit && <p className="text-gray-400 text-sm mt-2">Inicie uma nova inspeção agora.</p>}
+                {canCreateOrEdit && <p className="text-gray-400 text-sm mt-2">Inicie a primeira inspeção para esta obra.</p>}
             </div>
         ) : (
             <>
                 {/* Score Card */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between relative overflow-hidden">
-                    <div className="relative z-10">
-                        <h2 className="text-lg font-bold text-gray-800">Status Geral</h2>
-                        <p className="text-xs text-gray-500 mt-1">Última atualização: {new Date(latestReport.date).toLocaleDateString()}</p>
-                        <span className={`inline-block mt-2 px-3 py-1 text-xs font-bold rounded-full ${latestReport.evaluation === 'ÓTIMO' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {latestReport.evaluation}
-                        </span>
+                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-5 rounded-2xl shadow-lg text-white relative overflow-hidden">
+                    <div className="relative z-10 flex justify-between items-center">
+                        <div>
+                            <h2 className="text-lg font-bold text-white opacity-90">Conformidade Geral</h2>
+                            <p className="text-xs text-blue-100 mt-1">Atualizado em: {new Date(latestReport.date).toLocaleDateString()}</p>
+                            <span className={`inline-block mt-3 px-3 py-1 text-xs font-bold rounded-full bg-white bg-opacity-20 backdrop-blur-sm`}>
+                                {latestReport.evaluation}
+                            </span>
+                        </div>
+                        <div className="text-right">
+                             <span className="text-5xl font-bold">{latestReport.score}<span className="text-xl opacity-70">%</span></span>
+                        </div>
                     </div>
-                    <div className="relative z-10 text-right">
-                         <span className="text-4xl font-bold text-gray-800">{latestReport.score}<span className="text-lg text-gray-400">%</span></span>
+                    <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4">
+                         <DocumentCheckIcon className="h-40 w-40"/>
                     </div>
-                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-blue-50 to-transparent opacity-50"></div>
                 </div>
 
                 {/* Category Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <h3 className="text-gray-800 font-bold text-lg mt-6 mb-2">Categorias</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {CHECKLIST_DEFINITIONS.map(category => {
                         const score = latestReport.categoryScores[category.id] ?? 0;
                         const status = getCategoryStatus(category.id);
                         const Icon = categoryIcons[category.id];
                         return (
-                            <div key={category.id} onClick={() => onEditReportCategory(latestReport, category.id)} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-100 transition-all cursor-pointer flex flex-col relative">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className={`p-3 rounded-xl ${status.isComplete ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500'}`}>
+                            <div key={category.id} onClick={() => onEditReportCategory(latestReport, category.id)} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-3 rounded-xl ${status.isComplete ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-500'}`}>
                                         {Icon && <Icon className="h-6 w-6"/>}
                                     </div>
-                                    <ScoreRing score={score} />
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 text-sm leading-tight">{category.title}</h3>
+                                        <p className={`text-xs mt-1 font-medium ${status.isComplete ? 'text-green-600' : 'text-orange-500'}`}>
+                                            {status.isComplete ? 'Completo' : 'Pendente'}
+                                        </p>
+                                    </div>
                                 </div>
-                                
-                                <h3 className="font-bold text-gray-800 text-md leading-tight mb-1">{category.title}</h3>
-                                
-                                <div className="mt-auto pt-3 flex items-center justify-between border-t border-gray-50">
-                                    <span className={`text-xs font-medium ${status.isComplete ? 'text-green-600' : 'text-orange-500'}`}>
-                                        {status.isComplete ? 'Concluído' : 'Em andamento'}
-                                    </span>
-                                    <span className="text-gray-400 text-xs">Editar &rarr;</span>
-                                </div>
+                                <ScoreRing score={score} />
                             </div>
                         )
                     })}
@@ -165,13 +172,18 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
         {/* History */}
         {reports.length > 1 && (
              <div className="mt-8">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 px-1">Histórico</h2>
+                <h2 className="text-lg font-bold text-gray-800 mb-4">Histórico de Inspeções</h2>
                   <div className="space-y-3">
                     {reports.filter(r => r.id !== latestReport?.id).map(report => (
                       <div key={report.id} onClick={() => onViewReport(report)} className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center cursor-pointer hover:bg-gray-50">
-                          <div>
-                            <p className="font-bold text-gray-800 text-sm">{new Date(report.date).toLocaleDateString()}</p>
-                            <p className="text-xs text-gray-500">{report.inspector}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="bg-gray-100 p-2 rounded-lg text-gray-500">
+                                <ClockIcon className="h-5 w-5"/>
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-800 text-sm">{new Date(report.date).toLocaleDateString()}</p>
+                                <p className="text-xs text-gray-500">{report.inspector}</p>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3">
                              <span className={`text-xs font-bold px-2 py-1 rounded ${report.evaluation === 'ÓTIMO' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{report.score}%</span>

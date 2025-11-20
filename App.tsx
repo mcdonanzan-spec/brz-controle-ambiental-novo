@@ -191,9 +191,9 @@ const App: React.FC = () => {
     }
 
     return (
-    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-40">
+    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-40 h-16 sm:h-20">
       <div className="flex items-center space-x-4 cursor-pointer" onClick={() => setView('SITES_LIST')}>
-        <LogoIcon className="h-14 w-auto" />
+        <LogoIcon className="h-10 sm:h-14 w-auto" />
         <div className="h-10 w-px bg-gray-300 hidden sm:block"></div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 hidden sm:block uppercase tracking-tight">CONTROLE AMBIENTAL</h1>
       </div>
@@ -323,6 +323,10 @@ const App: React.FC = () => {
   };
   
   const BottomNav: React.FC = () => {
+    // Oculta a navegação global se estivermos dentro do formulário de inspeção
+    // isso previne conflito visual com a navegação de categorias da inspeção
+    if (view === 'REPORT_FORM') return null;
+
     const navItems = [
       { view: 'SITES_LIST' as View, label: 'Obras', icon: BuildingOfficeIcon, roles: ['admin', 'director', 'manager', 'assistant', 'viewer'] },
       { view: 'MANAGEMENT_DASHBOARD' as View, label: 'Gerencial', icon: ChartPieIcon, roles: ['admin', 'director', 'manager'] },
@@ -332,9 +336,9 @@ const App: React.FC = () => {
     const availableNavItems = navItems.filter(item => item.roles.includes(userProfile?.role || 'viewer'));
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] flex justify-around items-center z-50 h-16">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] flex justify-around items-center z-50 h-16 pb-safe">
           {availableNavItems.map(item => {
-            const isActive = view === item.view || (item.view === 'SITES_LIST' && ['PROJECT_DASHBOARD', 'REPORT_FORM', 'REPORT_VIEW'].includes(view));
+            const isActive = view === item.view || (item.view === 'SITES_LIST' && ['PROJECT_DASHBOARD', 'REPORT_VIEW'].includes(view));
             return (
               <button key={item.label} onClick={() => setView(item.view)} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-blue-500'}`}>
                 <item.icon className="h-6 w-6 mb-1"/>
@@ -350,7 +354,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-50 font-sans">
       <Toast message={toastMessage} onClear={() => setToastMessage('')} />
       <Header />
-      <main className="p-4 md:p-8 pb-24">
+      <main className={`p-4 md:p-8 ${view === 'REPORT_FORM' ? 'pb-0 p-0' : 'pb-24'}`}>
         {renderContent()}
       </main>
       <BottomNav/>

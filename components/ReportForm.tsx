@@ -33,30 +33,31 @@ const PhotoUploader: React.FC<{ photos: Photo[], onAddPhoto: (photo: Photo) => v
   };
 
   return (
-    <div className="mt-2 flex items-center gap-3 flex-wrap">
-      {photos.map(photo => (
-        <div key={photo.id} className="relative group">
-          <img src={photo.dataUrl} alt="inspection" className="h-20 w-20 rounded-lg object-cover shadow-sm border border-gray-200" />
-          <button disabled={disabled} onClick={() => onRemovePhoto(photo.id)} className={`absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 shadow-md ${disabled ? 'hidden' : 'opacity-100'} transition-opacity`}>
-            <XMarkIcon className="h-3 w-3" />
-          </button>
-        </div>
-      ))}
+    <div className="mt-3 flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
       <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileChange} className="hidden" disabled={disabled} />
+      
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={disabled}
-        className="h-20 w-20 bg-white border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-500 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="flex-shrink-0 h-24 w-24 bg-white border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-500 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
       >
-        <CameraIcon className="h-6 w-6 mb-1" />
-        <span className="text-[10px] font-bold uppercase">Foto</span>
+        <CameraIcon className="h-8 w-8 mb-1" />
+        <span className="text-[10px] font-bold uppercase">Adicionar</span>
       </button>
+
+      {photos.map(photo => (
+        <div key={photo.id} className="relative group flex-shrink-0">
+          <img src={photo.dataUrl} alt="inspection" className="h-24 w-24 rounded-xl object-cover shadow-sm border border-gray-200" />
+          <button disabled={disabled} onClick={() => onRemovePhoto(photo.id)} className={`absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1.5 shadow-md ${disabled ? 'hidden' : 'opacity-100'} transition-opacity`}>
+            <XMarkIcon className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
     </div>
   );
 };
 
-// Simulação Modal Gov.br
 const GovBrAuthModal: React.FC<{ isOpen: boolean; onClose: () => void; onConfirm: () => void }> = ({ isOpen, onClose, onConfirm }) => {
     const [step, setStep] = useState<'cpf' | 'password'>('cpf');
     const [isLoading, setIsLoading] = useState(false);
@@ -94,9 +95,6 @@ const GovBrAuthModal: React.FC<{ isOpen: boolean; onClose: () => void; onConfirm
                                  <label className="block text-sm font-medium text-gray-700">Número do CPF</label>
                                  <input type="text" placeholder="Digite seu CPF" className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-[#1351B4] focus:border-[#1351B4]" autoFocus/>
                              </div>
-                             <div className="text-sm text-gray-500">
-                                 Digite seu CPF para <span className="font-bold">criar</span> ou <span className="font-bold">acessar</span> sua conta gov.br
-                             </div>
                          </div>
                     ) : (
                          <div className="space-y-4 animate-fade-in">
@@ -127,9 +125,6 @@ const GovBrAuthModal: React.FC<{ isOpen: boolean; onClose: () => void; onConfirm
                         </button>
                     </div>
                 </div>
-                <div className="bg-gray-50 p-3 text-center text-xs text-gray-500 border-t">
-                    Ministério da Gestão e da Inovação em Serviços Públicos
-                </div>
             </div>
         </div>
     )
@@ -141,26 +136,51 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   );
   const [activeCategoryId, setActiveCategoryId] = useState<string>(initialCategoryId || CHECKLIST_DEFINITIONS[0].id);
   
-  // Estados para Modal Gov.br
   const [showGovLogin, setShowGovLogin] = useState(false);
   const [signingRole, setSigningRole] = useState<'inspector' | 'manager' | null>(null);
 
-  // Diretor e Viewer nunca editam, independente do status.
   const isReadOnly = useMemo(() => {
       if (userProfile.role === 'director' || userProfile.role === 'viewer') return true;
       return existingReport?.status === 'Completed' && userProfile.role !== 'manager'; 
   }, [existingReport, userProfile.role]);
   
-  const handleResultChange = (itemId: string, newResult: Partial<InspectionItemResult>) => {
+  const handleResultChange = (itemId: string, status: InspectionStatus) => {
     if (isReadOnly) return;
-    setReportData(prev => ({
-      ...prev,
-      results: prev.results.map(res => (res.itemId === itemId ? { ...res, ...newResult } : res)),
-    }));
+
+    setReportData(prev => {
+        // Se o status não for NC, limpamos as evidências para não salvar lixo no banco
+        const shouldClearEvidence = status !== InspectionStatus.NC;
+
+        return {
+            ...prev,
+            results: prev.results.map(res => {
+                if (res.itemId === itemId) {
+                    return { 
+                        ...res, 
+                        status: status,
+                        // Se mudou para Conforme ou NA, reseta fotos e plano
+                        photos: shouldClearEvidence ? [] : res.photos,
+                        comment: shouldClearEvidence ? '' : res.comment,
+                        actionPlan: shouldClearEvidence ? undefined : (res.actionPlan || { actions: '', responsible: '', deadline: '', resources: { fin: false, mo: false, adm: false }})
+                    };
+                }
+                return res;
+            }),
+        }
+    });
   };
+
+  const updateEvidence = (itemId: string, updates: Partial<InspectionItemResult>) => {
+      if (isReadOnly) return;
+      setReportData(prev => ({
+          ...prev,
+          results: prev.results.map(res => (res.itemId === itemId ? { ...res, ...updates } : res))
+      }));
+  }
 
   const handleSave = (status: 'Draft' | 'Completed') => {
       if (status === 'Completed') {
+          // Validação
           const categoryItemIds = CHECKLIST_DEFINITIONS.flatMap(cat => cat.subCategories.flatMap(sc => sc.items.map(i => i.id)));
           const unansweredItem = categoryItemIds.find(itemId => {
               const result = reportData.results.find(r => r.itemId === itemId);
@@ -168,15 +188,13 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
           });
 
           if (unansweredItem) {
-              const itemDef = CHECKLIST_DEFINITIONS.flatMap(c => c.subCategories.flatMap(sc => sc.items)).find(i => i.id === unansweredItem);
-              alert(`Não é possível finalizar.\n\nO item abaixo ainda não foi avaliado:\n"${itemDef?.text.substring(0, 50)}..."`);
+              alert("Por favor, responda todos os itens antes de finalizar.");
               return;
           }
 
           const invalidNC = reportData.results.find(r => r.status === InspectionStatus.NC && (!r.actionPlan?.actions));
           if (invalidNC) {
-              const itemDef = CHECKLIST_DEFINITIONS.flatMap(c => c.subCategories.flatMap(sc => sc.items)).find(i => i.id === invalidNC.itemId);
-              alert(`Não é possível finalizar.\n\nO item "Não Conforme" abaixo precisa de um Plano de Ação:\n"${itemDef?.text.substring(0, 50)}..."`);
+              alert("Itens Não Conformes exigem Plano de Ação preenchido.");
               return;
           }
 
@@ -221,231 +239,186 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   };
 
   return (
-    <div className="bg-white md:rounded-lg shadow-xl flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100vh-140px)] w-full max-w-6xl mx-auto relative overflow-hidden">
+    <div className="fixed inset-0 bg-gray-100 z-50 flex flex-col h-[100dvh] w-full">
       <GovBrAuthModal isOpen={showGovLogin} onClose={() => setShowGovLogin(false)} onConfirm={handleGovLoginConfirm} />
       
-      {/* Header */}
-      <div className="p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center flex-shrink-0 bg-white md:rounded-t-lg z-10 gap-3">
-        <div className="w-full sm:w-auto">
-            <h2 className="text-lg md:text-xl font-bold text-gray-800 leading-tight truncate">Inspeção: {project.name}</h2>
-            <p className="text-xs text-gray-500">{reportData.inspector}</p>
-        </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
-             <button onClick={onCancel} className="flex-1 sm:flex-none text-gray-600 hover:bg-gray-100 border border-gray-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                Cancelar
-             </button>
-             <button onClick={() => handleSave('Draft')} className="flex-1 sm:flex-none bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition-colors" disabled={isReadOnly}>
-                Rascunho
-             </button>
-             <button onClick={() => handleSave('Completed')} className="flex-1 sm:flex-none bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-lg text-sm font-medium shadow-md transition-colors flex items-center justify-center" disabled={isReadOnly}>
-                <CheckIcon className="h-4 w-4 mr-1"/>
-                Finalizar
-             </button>
-        </div>
+      {/* APP HEADER */}
+      <div className="bg-white border-b px-4 py-3 flex justify-between items-center shadow-sm flex-shrink-0">
+            <div className="flex flex-col">
+                <h1 className="text-lg font-bold text-gray-900 leading-tight">{project.name}</h1>
+                <span className="text-xs text-gray-500">Inspeção em andamento</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <button onClick={onCancel} className="text-gray-500 text-sm font-medium px-3 py-2">Sair</button>
+                <button 
+                    onClick={() => handleSave('Completed')} 
+                    disabled={isReadOnly}
+                    className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-full shadow hover:bg-blue-700 disabled:opacity-50"
+                >
+                    Finalizar
+                </button>
+            </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
+      {/* MAIN SCROLL AREA */}
+      <div className="flex-1 overflow-y-auto bg-gray-100 pb-32">
+        {activeCategory && (
+            <div className="max-w-3xl mx-auto p-4">
+                 <div className="flex items-center space-x-2 mb-6 mt-2">
+                     <div className="p-2 bg-blue-100 rounded-lg text-blue-700">
+                         {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-6 w-6" })}
+                     </div>
+                     <h2 className="text-xl font-bold text-gray-800">{activeCategory.title}</h2>
+                 </div>
 
-        {/* Sidebar Navigation (Desktop) */}
-        <div className="w-72 bg-gray-50 border-r overflow-y-auto hidden md:block custom-scrollbar">
-            <nav className="p-4 space-y-2">
-                {CHECKLIST_DEFINITIONS.map(cat => {
-                    const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
-                    const isActive = activeCategoryId === cat.id;
-                    
-                    const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
-                    const filledCount = reportData.results.filter(r => catItemIds.includes(r.itemId) && r.status !== null).length;
-                    const totalCount = catItemIds.length;
-                    const isComplete = filledCount === totalCount;
+                 <div className="space-y-4">
+                    {activeCategory.subCategories.map(subCat => (
+                        <div key={subCat.title} className="space-y-3">
+                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider ml-1">{subCat.title}</h3>
+                            
+                            {subCat.items.map(item => {
+                                const result = reportData.results.find(r => r.itemId === item.id);
+                                if (!result) return null;
 
-                    return (
-                        <button
-                            key={cat.id}
-                            onClick={() => setActiveCategoryId(cat.id)}
-                            className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${
-                                isActive 
-                                ? 'bg-white text-blue-700 shadow-md border border-blue-100' 
-                                : 'text-gray-600 hover:bg-gray-200'
-                            }`}
-                        >
-                            <div className="flex items-center">
-                                <div className={`p-2 rounded-lg mr-3 ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
-                                    <Icon className="h-5 w-5" />
-                                </div>
-                                <span className="text-sm font-bold text-left">{cat.title}</span>
-                            </div>
-                            {isComplete ? (
-                                <CheckIcon className="h-5 w-5 text-green-500" />
-                            ) : (
-                                <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{filledCount}/{totalCount}</span>
-                            )}
-                        </button>
-                    )
-                })}
-            </nav>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 md:bg-white pb-24 md:pb-0">
-            {activeCategory && (
-                <div className="max-w-3xl mx-auto p-4 md:p-8 animate-fade-in">
-                    {/* Desktop Header for Category */}
-                    <div className="hidden md:flex items-center space-x-4 mb-8 border-b pb-4">
-                         <div className="p-3 bg-blue-50 rounded-xl">
-                            {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-8 w-8 text-blue-600" })}
-                         </div>
-                         <h2 className="text-2xl font-bold text-gray-800">{activeCategory.title}</h2>
-                    </div>
-
-                    <div className="space-y-6">
-                        {activeCategory.subCategories.map(subCat => (
-                            <div key={subCat.title} className="space-y-4">
-                                <div className="flex items-center space-x-2 text-blue-800 bg-blue-50 px-3 py-2 rounded-lg">
-                                    <span className="font-bold text-sm uppercase tracking-wide">{subCat.title}</span>
-                                </div>
-                                
-                                {subCat.items.map(item => {
-                                    const result = reportData.results.find(r => r.itemId === item.id);
-                                    if (!result) return null;
-
-                                    return (
-                                        <div key={item.id} className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 relative">
+                                return (
+                                    <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                        <div className="p-4 md:p-6">
+                                            {/* Status Badge if Previous NC */}
+                                            {result.previousNc && (
+                                                <div className="inline-flex items-center px-2 py-1 mb-3 rounded bg-orange-50 text-orange-700 border border-orange-100 text-[10px] font-bold uppercase tracking-wide">
+                                                    <ExclamationTriangleIcon className="h-3 w-3 mr-1"/> Reincidência
+                                                </div>
+                                            )}
+                                            
                                             {/* Question */}
-                                            <div className="mb-5">
-                                                {result.previousNc && (
-                                                    <div className="inline-flex items-center px-2 py-0.5 mb-2 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
-                                                        <ExclamationTriangleIcon className="h-3 w-3 mr-1"/> REINCIDÊNCIA
+                                            <p className="text-gray-900 font-medium text-base md:text-lg leading-snug mb-6">
+                                                {item.text}
+                                            </p>
+
+                                            {/* ACTION BUTTONS - BIG TOUCH TARGETS */}
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <button
+                                                    onClick={() => handleResultChange(item.id, InspectionStatus.C)}
+                                                    className={`h-14 rounded-xl flex flex-col items-center justify-center border-2 transition-all ${
+                                                        result.status === InspectionStatus.C
+                                                        ? 'bg-green-500 border-green-500 text-white shadow-md transform scale-[1.02]'
+                                                        : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <CheckIcon className="h-6 w-6" strokeWidth={3} />
+                                                    {result.status === InspectionStatus.C && <span className="text-[10px] font-bold mt-1">Conforme</span>}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleResultChange(item.id, InspectionStatus.NC)}
+                                                    className={`h-14 rounded-xl flex flex-col items-center justify-center border-2 transition-all ${
+                                                        result.status === InspectionStatus.NC
+                                                        ? 'bg-red-500 border-red-500 text-white shadow-md transform scale-[1.02]'
+                                                        : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <XMarkIcon className="h-6 w-6" strokeWidth={3} />
+                                                    {result.status === InspectionStatus.NC && <span className="text-[10px] font-bold mt-1">Não Conforme</span>}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleResultChange(item.id, InspectionStatus.NA)}
+                                                    className={`h-14 rounded-xl flex flex-col items-center justify-center border-2 transition-all ${
+                                                        result.status === InspectionStatus.NA
+                                                        ? 'bg-gray-500 border-gray-500 text-white shadow-md transform scale-[1.02]'
+                                                        : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <MinusIcon className="h-6 w-6" strokeWidth={3} />
+                                                    {result.status === InspectionStatus.NA && <span className="text-[10px] font-bold mt-1">N/A</span>}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* EVIDENCE PANEL - EXPANDS ONLY ON NC */}
+                                        {result.status === InspectionStatus.NC && (
+                                            <div className="bg-red-50 border-t border-red-100 p-4 animate-fade-in">
+                                                <div className="space-y-4">
+                                                    {/* Photos */}
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-red-800 uppercase mb-2">Evidências (Fotos)</label>
+                                                        <PhotoUploader 
+                                                            photos={result.photos} 
+                                                            onAddPhoto={(p) => updateEvidence(item.id, { photos: [...result.photos, p] })}
+                                                            onRemovePhoto={(pid) => updateEvidence(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
+                                                            disabled={isReadOnly}
+                                                        />
                                                     </div>
-                                                )}
-                                                <p className="text-gray-800 font-semibold text-base">{item.text}</p>
-                                            </div>
 
-                                            {/* Answer Buttons - ICON ONLY - ORIGINAL APP STYLE */}
-                                            <div className="flex justify-between md:justify-center gap-3 md:gap-6 mb-2">
-                                                {/* Conforme */}
-                                                <button
-                                                    onClick={() => handleResultChange(item.id, { status: InspectionStatus.C })}
-                                                    disabled={isReadOnly}
-                                                    className={`flex-1 md:flex-none md:w-20 h-14 md:h-16 rounded-xl flex items-center justify-center transition-all transform active:scale-95 border-2 ${
-                                                        result.status === InspectionStatus.C 
-                                                        ? 'bg-green-500 border-green-600 text-white shadow-md' 
-                                                        : 'bg-white border-gray-200 text-gray-300 hover:border-green-400 hover:text-green-500'
-                                                    }`}
-                                                >
-                                                    <CheckIcon className="h-8 w-8 md:h-10 md:w-10" strokeWidth={3} />
-                                                </button>
+                                                    {/* Observation */}
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-red-800 uppercase mb-2">Observação</label>
+                                                        <textarea
+                                                            value={result.comment}
+                                                            onChange={e => updateEvidence(item.id, { comment: e.target.value })}
+                                                            placeholder="Descreva o problema encontrado..."
+                                                            className="w-full p-3 rounded-lg border border-red-200 focus:border-red-400 focus:ring-1 focus:ring-red-400 text-sm bg-white"
+                                                            rows={3}
+                                                        />
+                                                    </div>
 
-                                                {/* Não Conforme */}
-                                                <button
-                                                    onClick={() => handleResultChange(item.id, { status: InspectionStatus.NC })}
-                                                    disabled={isReadOnly}
-                                                    className={`flex-1 md:flex-none md:w-20 h-14 md:h-16 rounded-xl flex items-center justify-center transition-all transform active:scale-95 border-2 ${
-                                                        result.status === InspectionStatus.NC 
-                                                        ? 'bg-red-500 border-red-600 text-white shadow-md' 
-                                                        : 'bg-white border-gray-200 text-gray-300 hover:border-red-400 hover:text-red-500'
-                                                    }`}
-                                                >
-                                                    <XMarkIcon className="h-8 w-8 md:h-10 md:w-10" strokeWidth={3} />
-                                                </button>
-
-                                                {/* N/A */}
-                                                <button
-                                                    onClick={() => handleResultChange(item.id, { status: InspectionStatus.NA })}
-                                                    disabled={isReadOnly}
-                                                    className={`flex-1 md:flex-none md:w-20 h-14 md:h-16 rounded-xl flex items-center justify-center transition-all transform active:scale-95 border-2 ${
-                                                        result.status === InspectionStatus.NA 
-                                                        ? 'bg-gray-500 border-gray-600 text-white shadow-md' 
-                                                        : 'bg-white border-gray-200 text-gray-300 hover:border-gray-400 hover:text-gray-500'
-                                                    }`}
-                                                >
-                                                    <MinusIcon className="h-8 w-8 md:h-10 md:w-10" strokeWidth={3} />
-                                                </button>
-                                            </div>
-
-                                            {/* EVIDENCE SECTION - VISIBLE ONLY IF NC */}
-                                            {result.status === InspectionStatus.NC && (
-                                                <div className="mt-5 pt-5 border-t border-gray-100 animate-fade-in bg-red-50 rounded-lg p-4 border border-red-100">
-                                                    <div className="flex flex-col gap-4">
-                                                        {/* Photo Prompt */}
-                                                        <div>
-                                                             <div className="flex justify-between items-center mb-2">
-                                                                <p className="text-xs font-bold text-gray-700 uppercase">Evidência Fotográfica</p>
-                                                             </div>
-                                                             <PhotoUploader 
-                                                                photos={result.photos} 
-                                                                onAddPhoto={(p) => handleResultChange(item.id, { photos: [...result.photos, p] })}
-                                                                onRemovePhoto={(pid) => handleResultChange(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
-                                                                disabled={isReadOnly}
-                                                            />
+                                                    {/* Action Plan */}
+                                                    <div className="bg-white rounded-lg p-3 border border-red-200 shadow-sm">
+                                                        <div className="flex items-center mb-3 text-red-700">
+                                                            <ExclamationTriangleIcon className="h-4 w-4 mr-1.5"/>
+                                                            <span className="text-xs font-bold uppercase">Plano de Ação Obrigatório</span>
                                                         </div>
                                                         
-                                                        <div>
-                                                            <p className="text-xs font-bold text-gray-700 uppercase mb-2">Observações</p>
-                                                            <textarea
-                                                                placeholder="Descreva a não conformidade..."
-                                                                value={result.comment}
-                                                                onChange={e => handleResultChange(item.id, { comment: e.target.value })}
-                                                                disabled={isReadOnly}
-                                                                className="w-full text-sm p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all outline-none"
-                                                                rows={3}
-                                                            />
-                                                        </div>
-
-                                                        {/* Action Plan Section */}
-                                                        <div className="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
-                                                            <h4 className="text-xs font-bold text-red-600 uppercase mb-3 flex items-center">
-                                                                <ExclamationTriangleIcon className="h-4 w-4 mr-1"/> Plano de Ação Obrigatório
-                                                            </h4>
-                                                            <div className="space-y-3">
-                                                                <div>
-                                                                    <label className="block text-[10px] font-bold text-gray-500 mb-1">O QUE SERÁ FEITO?</label>
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={result.actionPlan?.actions || ''}
-                                                                        onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
-                                                                        disabled={isReadOnly}
-                                                                        className="w-full p-2.5 text-sm border border-gray-300 rounded-md focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"
+                                                        <div className="space-y-3">
+                                                            <div>
+                                                                <span className="block text-[10px] font-bold text-gray-500 mb-1">AÇÃO CORRETIVA</span>
+                                                                <input
+                                                                    type="text"
+                                                                    value={result.actionPlan?.actions || ''}
+                                                                    onChange={e => updateEvidence(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
+                                                                    className="w-full p-2 text-sm border border-gray-300 rounded focus:border-red-400 outline-none"
+                                                                    placeholder="O que será feito?"
+                                                                />
+                                                            </div>
+                                                            <div className="flex gap-3">
+                                                                <div className="flex-1">
+                                                                    <span className="block text-[10px] font-bold text-gray-500 mb-1">RESPONSÁVEL</span>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={result.actionPlan?.responsible || ''}
+                                                                        onChange={e => updateEvidence(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
+                                                                        className="w-full p-2 text-sm border border-gray-300 rounded focus:border-red-400 outline-none"
+                                                                        placeholder="Nome"
                                                                     />
                                                                 </div>
-                                                                <div className="flex gap-3">
-                                                                    <div className="flex-1">
-                                                                        <label className="block text-[10px] font-bold text-gray-500 mb-1">RESPONSÁVEL</label>
-                                                                        <input 
-                                                                            type="text" 
-                                                                            value={result.actionPlan?.responsible || ''}
-                                                                            onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
-                                                                            disabled={isReadOnly}
-                                                                            className="w-full p-2.5 text-sm border border-gray-300 rounded-md focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="w-32">
-                                                                        <label className="block text-[10px] font-bold text-gray-500 mb-1">PRAZO</label>
-                                                                        <input 
-                                                                            type="date" 
-                                                                            value={result.actionPlan?.deadline || ''}
-                                                                            onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
-                                                                            disabled={isReadOnly}
-                                                                            className="w-full p-2.5 text-sm border border-gray-300 rounded-md focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"
-                                                                        />
-                                                                    </div>
+                                                                <div className="w-1/3">
+                                                                    <span className="block text-[10px] font-bold text-gray-500 mb-1">PRAZO</span>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={result.actionPlan?.deadline || ''}
+                                                                        onChange={e => updateEvidence(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
+                                                                        className="w-full p-2 text-sm border border-gray-300 rounded focus:border-red-400 outline-none"
+                                                                    />
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-        
-        {/* Mobile Tabs (Category Icons) - BOTTOM NAVIGATION (APP STYLE) */}
-        <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white shadow-[0_-4px_15px_rgba(0,0,0,0.08)] flex overflow-x-auto no-scrollbar z-30 h-[80px] items-center border-t border-gray-100">
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ))}
+                 </div>
+            </div>
+        )}
+      </div>
+
+      {/* BOTTOM CATEGORY NAV - STICKY */}
+      <div className="h-20 bg-white border-t border-gray-200 flex items-center px-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex-shrink-0">
+        <div className="flex w-full overflow-x-auto gap-2 no-scrollbar px-2">
              {CHECKLIST_DEFINITIONS.map(cat => {
                  const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
                  const isActive = activeCategoryId === cat.id;
@@ -458,24 +431,25 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                     <button
                         key={cat.id}
                         onClick={() => setActiveCategoryId(cat.id)}
-                        className={`flex-1 min-w-[20%] h-full flex flex-col items-center justify-center relative transition-all active:bg-gray-50`}
+                        className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[70px] h-16 rounded-lg transition-all ${
+                            isActive ? 'bg-blue-50' : 'bg-transparent'
+                        }`}
                     >
-                        <div className={`relative p-2 rounded-xl transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-400'}`}>
-                            <Icon className={`h-7 w-7 ${isActive ? 'transform scale-105' : ''}`} />
-                            {/* Mini Badge for completion */}
+                        <div className={`relative transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <Icon className="h-6 w-6" />
                             {isComplete && !isActive && (
-                                <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-white"></div>
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
                             )}
                         </div>
-                        <span className={`text-[10px] font-bold mt-1 leading-none truncate w-full text-center px-1 ${isActive ? 'text-blue-700' : 'text-gray-400'}`}>
+                        <span className={`text-[10px] font-bold mt-1 truncate max-w-[80px] ${isActive ? 'text-blue-700' : 'text-gray-400'}`}>
                             {cat.title.split(' ')[0]}
                         </span>
                     </button>
                  )
              })}
         </div>
-
       </div>
+
     </div>
   );
 };

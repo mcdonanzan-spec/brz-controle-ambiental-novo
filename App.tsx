@@ -170,9 +170,9 @@ const App: React.FC = () => {
     return (
     <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-40">
       <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('SITES_LIST')}>
-        <MascotIcon className="h-10 w-auto" />
+        <MascotIcon className="h-12 w-auto" />
         <LogoIcon className="h-10 w-auto" />
-        <h1 className="text-xl md:text-2xl font-bold text-gray-800 hidden sm:block">Controle Ambiental</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800 hidden sm:block uppercase tracking-tight">CONTROLE AMBIENTAL</h1>
       </div>
       <div className="hidden md:block text-md font-semibold text-gray-700">
         {title}

@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan, UserProfile } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
 import { getNewReportTemplate } from '../services/dbApi';
-import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon, FingerPrintIcon, ShieldCheckIcon, UserCircleIcon, ExclamationTriangleIcon } from './icons';
+import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon, UserCircleIcon, ExclamationTriangleIcon } from './icons';
 
 interface ReportFormProps {
   project: Project;
@@ -328,45 +328,42 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                                                 )}
                                             </div>
 
-                                            {/* Botões de Ação - Layout Clássico */}
-                                            <div className="flex items-center gap-4 mb-4">
+                                            {/* Botões de Ação - Layout Clean / Horizontal */}
+                                            <div className="flex flex-wrap items-center gap-3 mb-3">
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.C })}
                                                     disabled={isReadOnly}
-                                                    className={`flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
-                                                        result.status === InspectionStatus.C 
-                                                        ? 'bg-green-500 border-green-600 text-white shadow-md transform scale-105' 
-                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-green-300 hover:bg-green-50'
-                                                    }`}
+                                                    className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center text-sm font-bold border transition-all
+                                                        ${result.status === InspectionStatus.C 
+                                                            ? 'bg-green-100 border-green-500 text-green-800 ring-1 ring-green-500' 
+                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 hover:border-gray-400'}`}
                                                 >
-                                                    <CheckIcon className="h-8 w-8 mb-1" />
-                                                    <span className="text-xs font-bold">Conforme</span>
+                                                    <CheckIcon className="h-5 w-5 mr-2" />
+                                                    Conforme
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NC })}
                                                     disabled={isReadOnly}
-                                                    className={`flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
-                                                        result.status === InspectionStatus.NC 
-                                                        ? 'bg-red-500 border-red-600 text-white shadow-md transform scale-105' 
-                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:bg-red-50'
-                                                    }`}
+                                                    className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center text-sm font-bold border transition-all
+                                                        ${result.status === InspectionStatus.NC 
+                                                            ? 'bg-red-100 border-red-500 text-red-800 ring-1 ring-red-500' 
+                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 hover:border-gray-400'}`}
                                                 >
-                                                    <XMarkIcon className="h-8 w-8 mb-1" />
-                                                    <span className="text-xs font-bold">Não Conforme</span>
+                                                    <XMarkIcon className="h-5 w-5 mr-2" />
+                                                    Não Conforme
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NA })}
                                                     disabled={isReadOnly}
-                                                    className={`flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
-                                                        result.status === InspectionStatus.NA 
-                                                        ? 'bg-gray-500 border-gray-600 text-white shadow-md transform scale-105' 
-                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-gray-400 hover:bg-gray-50'
-                                                    }`}
+                                                    className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center text-sm font-bold border transition-all
+                                                        ${result.status === InspectionStatus.NA 
+                                                            ? 'bg-gray-200 border-gray-400 text-gray-800 ring-1 ring-gray-400' 
+                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 hover:border-gray-400'}`}
                                                 >
-                                                    <MinusIcon className="h-8 w-8 mb-1" />
-                                                    <span className="text-xs font-bold">N/A</span>
+                                                    <MinusIcon className="h-5 w-5 mr-2" />
+                                                    N/A
                                                 </button>
                                             </div>
 

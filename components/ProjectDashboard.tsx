@@ -2,7 +2,7 @@
 import React from 'react';
 import { Project, Report, InspectionStatus, UserRole } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { ArrowLeftIcon, PlusIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon, ConcreteMixerIcon, WastePipeIcon, HardHatIcon, OilBarrelIcon, GasPumpIcon } from './icons';
+import { ArrowLeftIcon, PlusIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon } from './icons';
 
 interface ProjectDashboardProps {
   project: Project;
@@ -15,11 +15,11 @@ interface ProjectDashboardProps {
 }
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
-    massa: ConcreteMixerIcon,
-    efluentes: WastePipeIcon,
-    campo: HardHatIcon,
-    quimicos: OilBarrelIcon,
-    combustivel: GasPumpIcon,
+    massa: CubeTransparentIcon,
+    efluentes: FunnelIcon,
+    campo: WrenchScrewdriverIcon,
+    quimicos: BeakerIcon,
+    combustivel: FireIcon,
     signatures: DocumentCheckIcon
 };
 

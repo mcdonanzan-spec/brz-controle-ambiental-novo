@@ -2,7 +2,7 @@
 import React from 'react';
 import { Report, Project, InspectionStatus, UserRole } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { ArrowLeftIcon, PencilIcon } from './icons';
+import { ArrowLeftIcon, PencilIcon, ShieldCheckIcon } from './icons';
 
 interface ReportViewProps {
   report: Report;
@@ -125,18 +125,43 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
       ))}
       
       <div className="mt-8 pt-4 border-t">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Assinaturas</h2>
+        <h2 className="text-xl font-semibold text-gray-700 mb-4">Assinaturas do Documento</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-500">Responsável Ambiental</p>
-            <p className="font-serif text-lg text-gray-800 italic">{report.signatures.inspector || 'Pendente'}</p>
-            {report.signatures.inspectorDate && <p className="text-xs text-gray-400">{report.signatures.inspectorDate}</p>}
+          
+          {/* Assinatura Inspetor */}
+          <div className="bg-white border-2 border-[#1351B4] border-opacity-20 p-4 rounded-lg relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-2">
+                 <ShieldCheckIcon className={`h-8 w-8 ${report.signatures.inspector ? 'text-[#1351B4]' : 'text-gray-300'}`}/>
+             </div>
+             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Responsável Ambiental</p>
+             <p className="font-bold text-lg text-gray-800">{report.signatures.inspector || 'Pendente'}</p>
+             {report.signatures.inspectorDate && (
+                 <div className="mt-2 pt-2 border-t border-dashed border-gray-300">
+                     <p className="text-xs text-gray-500">Assinado eletronicamente em: <br/> <span className="font-mono text-gray-700">{report.signatures.inspectorDate}</span></p>
+                     <div className="mt-2 inline-flex items-center px-2 py-1 rounded bg-[#1351B4] bg-opacity-10 text-[#1351B4] text-[10px] font-bold uppercase tracking-wider">
+                        Verificado gov.br
+                    </div>
+                 </div>
+             )}
           </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-500">Engenheiro Gerente</p>
-            <p className="font-serif text-lg text-gray-800 italic">{report.signatures.manager || 'Pendente'}</p>
-             {report.signatures.managerDate && <p className="text-xs text-gray-400">{report.signatures.managerDate}</p>}
+
+          {/* Assinatura Gerente */}
+          <div className="bg-white border-2 border-[#1351B4] border-opacity-20 p-4 rounded-lg relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-2">
+                 <ShieldCheckIcon className={`h-8 w-8 ${report.signatures.manager ? 'text-[#1351B4]' : 'text-gray-300'}`}/>
+             </div>
+             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Engenheiro Gerente</p>
+             <p className="font-bold text-lg text-gray-800">{report.signatures.manager || 'Pendente'}</p>
+             {report.signatures.managerDate && (
+                 <div className="mt-2 pt-2 border-t border-dashed border-gray-300">
+                     <p className="text-xs text-gray-500">Assinado eletronicamente em: <br/> <span className="font-mono text-gray-700">{report.signatures.managerDate}</span></p>
+                     <div className="mt-2 inline-flex items-center px-2 py-1 rounded bg-[#1351B4] bg-opacity-10 text-[#1351B4] text-[10px] font-bold uppercase tracking-wider">
+                        Verificado gov.br
+                    </div>
+                 </div>
+             )}
           </div>
+
         </div>
       </div>
     </div>

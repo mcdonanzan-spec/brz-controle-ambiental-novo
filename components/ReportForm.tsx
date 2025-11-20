@@ -1,9 +1,8 @@
-
 import React, { useState, useMemo } from 'react';
 import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan, UserProfile } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
 import { getNewReportTemplate } from '../services/dbApi';
-import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon } from './icons';
+import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon, FingerPrintIcon, ShieldCheckIcon, UserCircleIcon } from './icons';
 
 interface ReportFormProps {
   project: Project;
@@ -56,11 +55,94 @@ const PhotoUploader: React.FC<{ photos: Photo[], onAddPhoto: (photo: Photo) => v
   );
 };
 
+// Simulação Modal Gov.br
+const GovBrAuthModal: React.FC<{ isOpen: boolean; onClose: () => void; onConfirm: () => void }> = ({ isOpen, onClose, onConfirm }) => {
+    const [step, setStep] = useState<'cpf' | 'password'>('cpf');
+    const [isLoading, setIsLoading] = useState(false);
+
+    if (!isOpen) return null;
+
+    const handleNext = () => {
+        if(step === 'cpf') {
+            setStep('password');
+        } else {
+            setIsLoading(true);
+            setTimeout(() => {
+                setIsLoading(false);
+                onConfirm();
+                setStep('cpf');
+            }, 1500);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden">
+                <div className="flex items-center p-4 border-b">
+                    <div className="flex space-x-2 font-bold text-2xl text-[#1351B4]">
+                         <span className="italic">gov.br</span>
+                    </div>
+                </div>
+                <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Identifique-se no gov.br</h3>
+                    <p className="text-sm text-gray-600 mb-6">Utilize sua conta gov.br para assinar digitalmente este documento.</p>
+
+                    {step === 'cpf' ? (
+                         <div className="space-y-4">
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-700">Número do CPF</label>
+                                 <input type="text" placeholder="Digite seu CPF" className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-[#1351B4] focus:border-[#1351B4]" autoFocus/>
+                             </div>
+                             <div className="text-sm text-gray-500">
+                                 Digite seu CPF para <span className="font-bold">criar</span> ou <span className="font-bold">acessar</span> sua conta gov.br
+                             </div>
+                         </div>
+                    ) : (
+                         <div className="space-y-4 animate-fade-in">
+                             <div className="flex items-center space-x-2 mb-2">
+                                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-600">
+                                     <UserCircleIcon className="h-6 w-6"/>
+                                 </div>
+                                 <span className="text-sm font-bold">***.***.***-**</span>
+                             </div>
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-700">Senha</label>
+                                 <input type="password" placeholder="Digite sua senha" className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-[#1351B4] focus:border-[#1351B4]" autoFocus/>
+                             </div>
+                         </div>
+                    )}
+
+                    <div className="mt-8 flex justify-end space-x-3">
+                        <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                        <button 
+                            onClick={handleNext}
+                            disabled={isLoading}
+                            className="px-6 py-2 bg-[#1351B4] text-white font-semibold rounded-full hover:bg-blue-800 transition-colors flex items-center"
+                        >
+                            {isLoading ? (
+                                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                            ) : null}
+                            {step === 'cpf' ? 'Continuar' : 'Entrar'}
+                        </button>
+                    </div>
+                </div>
+                <div className="bg-gray-50 p-3 text-center text-xs text-gray-500 border-t">
+                    Ministério da Gestão e da Inovação em Serviços Públicos
+                </div>
+            </div>
+        </div>
+    )
+}
+
 const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userProfile, onSave, onCancel, initialCategoryId }) => {
   const [reportData, setReportData] = useState<Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> & {id?: string}>(
     existingReport ? {...existingReport} : getNewReportTemplate(project.id, userProfile.full_name, userProfile.id)
   );
   const [activeCategoryId, setActiveCategoryId] = useState<string>(initialCategoryId || CHECKLIST_DEFINITIONS[0].id);
+  
+  // Estados para Modal Gov.br
+  const [showGovLogin, setShowGovLogin] = useState(false);
+  const [signingRole, setSigningRole] = useState<'inspector' | 'manager' | null>(null);
 
   // Diretor e Viewer nunca editam, independente do status.
   const isReadOnly = useMemo(() => {
@@ -97,16 +179,24 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
       }
   }
   
-  const handleSignature = (role: 'inspector' | 'manager') => {
+  const initiateSignature = (role: 'inspector' | 'manager') => {
+      setSigningRole(role);
+      setShowGovLogin(true);
+  }
+  
+  const completeSignature = () => {
+      if(!signingRole) return;
       const dateStr = new Date().toLocaleString();
       setReportData(prev => ({
           ...prev,
           signatures: {
               ...prev.signatures,
-              [role]: userProfile.full_name,
-              [`${role}Date`]: dateStr
+              [signingRole]: userProfile.full_name,
+              [`${signingRole}Date`]: dateStr
           }
       }));
+      setShowGovLogin(false);
+      setSigningRole(null);
   }
 
   const handleSubmit = (status: 'Draft' | 'Completed') => {
@@ -215,6 +305,8 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
 
   return (
     <div className="bg-white pb-32">
+        <GovBrAuthModal isOpen={showGovLogin} onClose={() => setShowGovLogin(false)} onConfirm={completeSignature} />
+
         <div className="p-4 sm:p-6 min-h-[calc(100vh-200px)]">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">{existingReport ? 'Editar Relatório' : 'Novo Relatório de Inspeção'}</h2>
             {isReadOnly && (
@@ -240,42 +332,66 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
             
             {activeCategoryId === 'signatures' && (
                 <div id="signatures" className="animate-fade-in">
-                    <h3 className="text-xl font-semibold text-gray-700 mb-4 bg-gray-100 p-3 rounded-lg">Assinaturas</h3>
-                    <p className="text-sm text-gray-500 my-4">Confirme sua identidade clicando no botão de assinatura abaixo.</p>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4 bg-gray-100 p-3 rounded-lg">Assinaturas Digitais</h3>
+                    <p className="text-sm text-gray-500 my-4">A assinatura eletrônica garante a autenticidade deste documento. Utilize sua conta gov.br para assinar.</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className={`p-4 rounded-lg border-2 ${reportData.signatures.inspector ? 'border-green-500 bg-green-50' : 'border-dashed border-gray-300'}`}>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Responsável Ambiental</label>
+                        {/* Assinatura Inspetor */}
+                        <div className={`p-5 rounded-lg border-2 transition-all ${reportData.signatures.inspector ? 'border-[#1351B4] bg-blue-50 shadow-sm' : 'border-dashed border-gray-300'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                                <label className="block text-sm font-bold text-gray-700">Responsável Ambiental</label>
+                                {reportData.signatures.inspector && <ShieldCheckIcon className="h-6 w-6 text-[#1351B4]" title="Verificado via gov.br" />}
+                            </div>
+                            
                             {reportData.signatures.inspector ? (
                                 <div>
-                                    <p className="text-lg font-bold text-green-800">{reportData.signatures.inspector}</p>
-                                    <p className="text-xs text-green-600">{reportData.signatures.inspectorDate}</p>
+                                    <p className="text-lg font-bold text-gray-900">{reportData.signatures.inspector}</p>
+                                    <p className="text-xs text-gray-600 flex items-center mt-1">
+                                        <CheckIcon className="h-3 w-3 mr-1 text-green-600"/>
+                                        Assinado em {reportData.signatures.inspectorDate}
+                                    </p>
+                                    <div className="mt-3 inline-flex items-center px-2 py-1 rounded bg-[#1351B4] text-white text-[10px] font-bold uppercase tracking-wider">
+                                        Identidade gov.br verificada
+                                    </div>
                                 </div>
                             ) : (
                                 <button 
-                                    onClick={() => handleSignature('inspector')}
+                                    onClick={() => initiateSignature('inspector')}
                                     disabled={!canSignInspector}
-                                    className="w-full py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    className="w-full py-3 bg-[#1351B4] text-white rounded-lg shadow hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center font-semibold transition-colors"
                                 >
-                                    {canSignInspector ? 'Assinar Digitalmente' : 'Aguardando Assinatura'}
+                                    <span className="mr-2 font-serif italic font-bold">gov.br</span>
+                                    {canSignInspector ? 'Assinar como Responsável' : 'Aguardando Assinatura'}
                                 </button>
                             )}
                         </div>
 
-                        <div className={`p-4 rounded-lg border-2 ${reportData.signatures.manager ? 'border-green-500 bg-green-50' : 'border-dashed border-gray-300'}`}>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Responsável Engenharia</label>
+                        {/* Assinatura Gerente */}
+                        <div className={`p-5 rounded-lg border-2 transition-all ${reportData.signatures.manager ? 'border-[#1351B4] bg-blue-50 shadow-sm' : 'border-dashed border-gray-300'}`}>
+                             <div className="flex justify-between items-start mb-2">
+                                <label className="block text-sm font-bold text-gray-700">Engenheiro Gerente</label>
+                                {reportData.signatures.manager && <ShieldCheckIcon className="h-6 w-6 text-[#1351B4]" title="Verificado via gov.br" />}
+                            </div>
+
                              {reportData.signatures.manager ? (
                                 <div>
-                                    <p className="text-lg font-bold text-green-800">{reportData.signatures.manager}</p>
-                                    <p className="text-xs text-green-600">{reportData.signatures.managerDate}</p>
+                                    <p className="text-lg font-bold text-gray-900">{reportData.signatures.manager}</p>
+                                    <p className="text-xs text-gray-600 flex items-center mt-1">
+                                        <CheckIcon className="h-3 w-3 mr-1 text-green-600"/>
+                                        Assinado em {reportData.signatures.managerDate}
+                                    </p>
+                                    <div className="mt-3 inline-flex items-center px-2 py-1 rounded bg-[#1351B4] text-white text-[10px] font-bold uppercase tracking-wider">
+                                        Identidade gov.br verificada
+                                    </div>
                                 </div>
                             ) : (
                                 <button 
-                                    onClick={() => handleSignature('manager')}
+                                    onClick={() => initiateSignature('manager')}
                                     disabled={!canSignManager}
-                                    className="w-full py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    className="w-full py-3 bg-[#1351B4] text-white rounded-lg shadow hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center font-semibold transition-colors"
                                 >
-                                    {canSignManager ? 'Assinar Digitalmente' : 'Aguardando Engenharia'}
+                                    <span className="mr-2 font-serif italic font-bold">gov.br</span>
+                                    {canSignManager ? 'Assinar como Gerente' : 'Aguardando Engenharia'}
                                 </button>
                             )}
                         </div>
@@ -295,7 +411,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
             )
         })}
         <button onClick={() => setActiveCategoryId('signatures')} className={`flex flex-col items-center w-16 transition-colors ${activeCategoryId === 'signatures' ? categoryColors['signatures'] : 'text-gray-500 hover:text-blue-600'}`}>
-          <DocumentCheckIcon className="h-6 w-6 mb-1"/>
+          <FingerPrintIcon className="h-6 w-6 mb-1"/>
           <span className="text-xs font-medium">Assinar</span>
         </button>
       </div>

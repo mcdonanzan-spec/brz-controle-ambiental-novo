@@ -117,6 +117,7 @@ const App: React.FC = () => {
         ? projectReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] 
         : null;
 
+    // Passa o lastReport para o template generator
     const template = getNewReportTemplate(project.id, userProfile?.full_name || 'Desconhecido', userProfile?.id || '', lastReport);
     
     setNewReportTemplate(template);

@@ -2,13 +2,13 @@
 import React, { useState, useMemo } from 'react';
 import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { getNewReportTemplate, saveReport } from '../services/mockApi';
+import { getNewReportTemplate } from '../services/dbApi'; // Usar o helper do dbApi
 import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon } from './icons';
 
 interface ReportFormProps {
   project: Project;
   existingReport: Report | null;
-  onSave: (status: 'Draft' | 'Completed') => void;
+  onSave: (data: Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> & {id?: string}, status: 'Draft' | 'Completed') => void;
   onCancel: () => void;
   initialCategoryId?: string;
 }
@@ -94,13 +94,15 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, onSave
 
   const handleSubmit = (status: 'Draft' | 'Completed') => {
     if (isReadOnly) return;
-    const finalData = { ...reportData, status, date: new Date().toISOString().split('T')[0] };
+    
     if (status === 'Completed' && (!reportData.signatures.inspector || !reportData.signatures.manager)) {
         alert("Ambas as assinaturas são necessárias para concluir o relatório.");
         return;
     }
-    saveReport(finalData);
-    onSave(status);
+    
+    // Pass data to parent instead of saving directly
+    const finalData = { ...reportData, date: new Date().toISOString().split('T')[0] };
+    onSave(finalData, status);
   };
   
   const StatusButton: React.FC<{result: InspectionItemResult; itemId: string; status: InspectionStatus; icon: React.FC<React.SVGProps<SVGSVGElement>>; color: string;}> = ({ result, itemId, status, icon: Icon, color }) => {

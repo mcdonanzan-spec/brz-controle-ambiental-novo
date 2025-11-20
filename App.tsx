@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Project, Report, User } from './types';
-import { getProjects, getReports } from './services/mockApi';
+import { fetchProjects, fetchReports, upsertReport, getNewReportTemplate } from './services/dbApi'; // Trocado para dbApi
 import { MOCK_USERS } from './services/mockUsers';
 import Dashboard from './components/Dashboard';
 import ProjectDashboard from './components/ProjectDashboard';
@@ -9,28 +9,39 @@ import ReportForm from './components/ReportForm';
 import ReportView from './components/ReportView';
 import PendingActions from './components/PendingActions';
 import Toast from './components/Toast';
-import { LogoIcon, BuildingOfficeIcon, ChartPieIcon, UserCircleIcon, MascotIcon } from './components/icons';
+import { LogoIcon, MascotIcon, ChartPieIcon, BuildingOfficeIcon, UserCircleIcon } from './components/icons';
 
 type View = 'SITES_LIST' | 'PROJECT_DASHBOARD' | 'REPORT_FORM' | 'REPORT_VIEW' | 'MANAGEMENT_DASHBOARD' | 'PENDING_ACTIONS';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('SITES_LIST');
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); // Default to Directory
+  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); 
   const [projects, setProjects] = useState<Project[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Loading state
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [initialCategoryId, setInitialCategoryId] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string>('');
 
-  const refreshData = () => {
-     setProjects(getProjects());
-     setReports(getReports());
+  const loadData = async () => {
+     setIsLoading(true);
+     try {
+        const p = await fetchProjects();
+        const r = await fetchReports();
+        setProjects(p);
+        setReports(r);
+     } catch (error) {
+        console.error("Falha ao carregar dados", error);
+        setToastMessage("Erro ao conectar com o servidor.");
+     } finally {
+        setIsLoading(false);
+     }
   };
 
   useEffect(() => {
-    refreshData();
+    loadData();
   }, [currentUser]);
   
   const filteredProjects = projects.filter(p => currentUser.role === 'Diretoria' || currentUser.projectIds.includes(p.id));
@@ -75,19 +86,42 @@ const App: React.FC = () => {
     setView('REPORT_FORM');
   }
 
-  const handleSaveReport = (status: 'Draft' | 'Completed') => {
-    refreshData();
+  const handleSaveReport = async (status: 'Draft' | 'Completed') => {
+    setIsLoading(true); // Show loading during save/upload
+    await loadData(); // Refresh to get latest before saving context? Or just saving.
+    // Logic moved inside components/ReportForm normally, but here we handle the callback
+    // We need to trigger the actual save inside the form or pass the function down.
+    // Since ReportForm calls onSave *after* saving in the mock, we need to adjust ReportForm
+    // BUT, ReportForm currently calls saveReport directly.
+    // We will rely on the refreshed data below.
+    
     if (status === 'Draft') {
         setToastMessage('Rascunho salvo com sucesso!');
     } else {
         setToastMessage('Relatório concluído e enviado!');
     }
+    
+    setIsLoading(false);
+
     if (selectedProject) {
       setView('PROJECT_DASHBOARD');
     } else {
       setView('SITES_LIST');
     }
   };
+  
+  // Wrapper para injetar a prop de salvamento async no ReportForm
+  const handleAsyncSave = async (data: any, status: 'Draft' | 'Completed') => {
+      setIsLoading(true);
+      try {
+          await upsertReport({ ...data, status });
+          await loadData();
+          handleSaveReport(status);
+      } catch (e) {
+          setToastMessage("Erro ao salvar relatório.");
+          setIsLoading(false);
+      }
+  }
 
   const navigateToSitesList = () => {
     setSelectedProject(null);
@@ -167,6 +201,14 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        )
+    }
+
     switch (view) {
       case 'PROJECT_DASHBOARD':
         if (!selectedProject) return null;
@@ -186,7 +228,7 @@ const App: React.FC = () => {
           <ReportForm
             project={selectedProject}
             existingReport={editingReport}
-            onSave={handleSaveReport}
+            onSave={(data, status) => handleAsyncSave(data, status)}
             onCancel={() => selectedProject ? setView('PROJECT_DASHBOARD') : navigateToSitesList()}
             initialCategoryId={initialCategoryId}
           />

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan, UserProfile } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
 import { getNewReportTemplate } from '../services/dbApi';
@@ -111,7 +111,7 @@ const GovBrAuthModal: React.FC<{ isOpen: boolean; onClose: () => void; onConfirm
                                  <input type="password" placeholder="Digite sua senha" className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring-[#1351B4] focus:border-[#1351B4]" autoFocus/>
                              </div>
                          </div>
-                    )}
+                    ) }
 
                     <div className="mt-8 flex justify-end space-x-3">
                         <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
@@ -221,13 +221,13 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   };
 
   return (
-    <div className="bg-white md:rounded-lg shadow-xl flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-140px)] w-full max-w-6xl mx-auto">
+    <div className="bg-white md:rounded-lg shadow-xl flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100vh-140px)] w-full max-w-6xl mx-auto relative">
       <GovBrAuthModal isOpen={showGovLogin} onClose={() => setShowGovLogin(false)} onConfirm={handleGovLoginConfirm} />
       
       {/* Header */}
       <div className="p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center flex-shrink-0 bg-white md:rounded-t-lg z-10 gap-3">
-        <div>
-            <h2 className="text-lg md:text-xl font-bold text-gray-800 leading-tight">Inspeção: {project.name}</h2>
+        <div className="w-full sm:w-auto">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 leading-tight truncate">Inspeção: {project.name}</h2>
             <p className="text-xs text-gray-500">{reportData.inspector}</p>
         </div>
         <div className="flex space-x-2 w-full sm:w-auto">
@@ -235,7 +235,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                 Cancelar
              </button>
              <button onClick={() => handleSave('Draft')} className="flex-1 sm:flex-none bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition-colors" disabled={isReadOnly}>
-                Salvar
+                Rascunho
              </button>
              <button onClick={() => handleSave('Completed')} className="flex-1 sm:flex-none bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-lg text-sm font-medium shadow-md transition-colors flex items-center justify-center" disabled={isReadOnly}>
                 <CheckIcon className="h-4 w-4 mr-1"/>
@@ -244,41 +244,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        
-        {/* Mobile Tabs (Category Icons) - Top Scroll */}
-        <div className="md:hidden overflow-x-auto flex border-b bg-white flex-shrink-0 no-scrollbar">
-             {CHECKLIST_DEFINITIONS.map(cat => {
-                 const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
-                 const isActive = activeCategoryId === cat.id;
-                 const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
-                 const filledCount = reportData.results.filter(r => catItemIds.includes(r.itemId) && r.status !== null).length;
-                 const totalCount = catItemIds.length;
-                 
-                 return (
-                    <button
-                        key={cat.id}
-                        onClick={() => setActiveCategoryId(cat.id)}
-                        className={`flex-shrink-0 py-3 px-4 flex flex-col items-center min-w-[80px] relative ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
-                    >
-                        <div className={`p-2 rounded-full mb-1 ${isActive ? 'bg-blue-50' : ''}`}>
-                            <Icon className="h-6 w-6" />
-                        </div>
-                        <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{cat.title.split(' ')[0]}</span>
-                        
-                        {/* Progress dot */}
-                        <div className="mt-1 h-1 w-8 bg-gray-100 rounded-full overflow-hidden">
-                            <div 
-                                className={`h-full rounded-full ${filledCount === totalCount ? 'bg-green-500' : 'bg-blue-500'}`} 
-                                style={{ width: `${(filledCount / totalCount) * 100}%` }}
-                            ></div>
-                        </div>
-                        
-                        {isActive && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
-                    </button>
-                 )
-             })}
-        </div>
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
 
         {/* Sidebar Navigation (Desktop) */}
         <div className="w-72 bg-gray-50 border-r overflow-y-auto hidden md:block custom-scrollbar">
@@ -320,9 +286,9 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 md:bg-white">
+        <div className="flex-1 overflow-y-auto bg-gray-50 md:bg-white pb-20 md:pb-0">
             {activeCategory && (
-                <div className="max-w-3xl mx-auto p-4 md:p-8 pb-24 animate-fade-in">
+                <div className="max-w-3xl mx-auto p-4 md:p-8 animate-fade-in">
                     {/* Desktop Header for Category */}
                     <div className="hidden md:flex items-center space-x-4 mb-8 border-b pb-4">
                          <div className="p-3 bg-blue-50 rounded-xl">
@@ -343,117 +309,122 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                                     if (!result) return null;
 
                                     return (
-                                        <div key={item.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                                        <div key={item.id} className="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
                                             {/* Question */}
-                                            <div className="mb-5">
+                                            <div className="mb-4">
                                                 {result.previousNc && (
                                                     <div className="inline-flex items-center px-2 py-0.5 mb-2 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
                                                         <ExclamationTriangleIcon className="h-3 w-3 mr-1"/> REINCIDÊNCIA
                                                     </div>
                                                 )}
-                                                <p className="text-gray-800 font-medium leading-snug">{item.text}</p>
+                                                <p className="text-gray-800 font-medium leading-snug text-sm md:text-base">{item.text}</p>
                                             </div>
 
                                             {/* Answer Buttons - ICON ONLY - ORIGINAL APP STYLE */}
-                                            <div className="flex justify-center gap-6 mb-5">
+                                            <div className="flex justify-between md:justify-center gap-3 md:gap-6 mb-2">
                                                 {/* Conforme */}
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.C })}
                                                     disabled={isReadOnly}
-                                                    className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm ${
+                                                    className={`flex-1 md:flex-none md:w-16 h-14 md:h-16 rounded-xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm border ${
                                                         result.status === InspectionStatus.C 
-                                                        ? 'bg-green-500 text-white shadow-green-200 ring-2 ring-green-500 ring-offset-2' 
-                                                        : 'bg-gray-50 text-gray-400 hover:bg-green-50 hover:text-green-500 border border-gray-200'
+                                                        ? 'bg-green-500 text-white border-green-600 shadow-md' 
+                                                        : 'bg-gray-50 text-gray-300 border-gray-200 hover:bg-green-50 hover:text-green-400'
                                                     }`}
                                                 >
-                                                    <CheckIcon className="h-10 w-10" />
+                                                    <CheckIcon className="h-8 w-8 md:h-10 md:w-10" />
                                                 </button>
 
                                                 {/* Não Conforme */}
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NC })}
                                                     disabled={isReadOnly}
-                                                    className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm ${
+                                                    className={`flex-1 md:flex-none md:w-16 h-14 md:h-16 rounded-xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm border ${
                                                         result.status === InspectionStatus.NC 
-                                                        ? 'bg-red-500 text-white shadow-red-200 ring-2 ring-red-500 ring-offset-2' 
-                                                        : 'bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 border border-gray-200'
+                                                        ? 'bg-red-500 text-white border-red-600 shadow-md' 
+                                                        : 'bg-gray-50 text-gray-300 border-gray-200 hover:bg-red-50 hover:text-red-400'
                                                     }`}
                                                 >
-                                                    <XMarkIcon className="h-10 w-10" />
+                                                    <XMarkIcon className="h-8 w-8 md:h-10 md:w-10" />
                                                 </button>
 
                                                 {/* N/A */}
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NA })}
                                                     disabled={isReadOnly}
-                                                    className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm ${
+                                                    className={`flex-1 md:flex-none md:w-16 h-14 md:h-16 rounded-xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm border ${
                                                         result.status === InspectionStatus.NA 
-                                                        ? 'bg-gray-600 text-white shadow-gray-300 ring-2 ring-gray-600 ring-offset-2' 
-                                                        : 'bg-gray-50 text-gray-400 hover:bg-gray-200 hover:text-gray-600 border border-gray-200'
+                                                        ? 'bg-gray-600 text-white border-gray-700 shadow-md' 
+                                                        : 'bg-gray-50 text-gray-300 border-gray-200 hover:bg-gray-200 hover:text-gray-500'
                                                     }`}
                                                 >
-                                                    <MinusIcon className="h-10 w-10" />
+                                                    <MinusIcon className="h-8 w-8 md:h-10 md:w-10" />
                                                 </button>
                                             </div>
 
-                                            {/* Extended Actions */}
-                                            <div className="border-t pt-4">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    {/* Photo Prompt */}
-                                                    <PhotoUploader 
-                                                        photos={result.photos} 
-                                                        onAddPhoto={(p) => handleResultChange(item.id, { photos: [...result.photos, p] })}
-                                                        onRemovePhoto={(pid) => handleResultChange(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
-                                                        disabled={isReadOnly}
-                                                    />
-                                                </div>
-                                                
-                                                <textarea
-                                                    placeholder="Adicionar observação..."
-                                                    value={result.comment}
-                                                    onChange={e => handleResultChange(item.id, { comment: e.target.value })}
-                                                    disabled={isReadOnly}
-                                                    className="w-full text-sm p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    rows={1}
-                                                    style={{ minHeight: '2.5rem' }}
-                                                />
-
-                                                {/* Action Plan Section */}
-                                                {result.status === InspectionStatus.NC && (
-                                                    <div className="mt-4 bg-red-50 p-4 rounded-xl border border-red-100 animate-fade-in">
-                                                        <h4 className="text-xs font-bold text-red-700 uppercase mb-3 flex items-center">
-                                                            <ExclamationTriangleIcon className="h-4 w-4 mr-1"/> Plano de Ação
-                                                        </h4>
-                                                        <div className="space-y-3">
-                                                            <input 
-                                                                type="text" 
-                                                                value={result.actionPlan?.actions || ''}
-                                                                onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
+                                            {/* EVIDENCE SECTION - VISIBLE ONLY IF NC */}
+                                            {result.status === InspectionStatus.NC && (
+                                                <div className="mt-4 pt-4 border-t border-gray-100 animate-fade-in bg-red-50/30 rounded-lg p-3">
+                                                    <div className="flex flex-col gap-3">
+                                                        {/* Photo Prompt */}
+                                                        <div>
+                                                             <p className="text-xs font-bold text-gray-500 mb-1">Evidência Fotográfica</p>
+                                                             <PhotoUploader 
+                                                                photos={result.photos} 
+                                                                onAddPhoto={(p) => handleResultChange(item.id, { photos: [...result.photos, p] })}
+                                                                onRemovePhoto={(pid) => handleResultChange(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
                                                                 disabled={isReadOnly}
-                                                                placeholder="O que será feito?"
-                                                                className="w-full p-2 text-sm border border-red-200 rounded-lg focus:border-red-500 focus:ring-red-500"
                                                             />
-                                                            <div className="flex gap-3">
+                                                        </div>
+                                                        
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-500 mb-1">Observações</p>
+                                                            <textarea
+                                                                placeholder="Descreva a não conformidade..."
+                                                                value={result.comment}
+                                                                onChange={e => handleResultChange(item.id, { comment: e.target.value })}
+                                                                disabled={isReadOnly}
+                                                                className="w-full text-sm p-3 bg-white border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
+                                                                rows={2}
+                                                            />
+                                                        </div>
+
+                                                        {/* Action Plan Section */}
+                                                        <div className="bg-white p-3 rounded-lg border border-red-100 shadow-sm">
+                                                            <h4 className="text-xs font-bold text-red-600 uppercase mb-2 flex items-center">
+                                                                <ExclamationTriangleIcon className="h-3 w-3 mr-1"/> Plano de Ação Obrigatório
+                                                            </h4>
+                                                            <div className="space-y-3">
                                                                 <input 
                                                                     type="text" 
-                                                                    value={result.actionPlan?.responsible || ''}
-                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
+                                                                    value={result.actionPlan?.actions || ''}
+                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
                                                                     disabled={isReadOnly}
-                                                                    placeholder="Responsável"
-                                                                    className="w-1/2 p-2 text-sm border border-red-200 rounded-lg focus:border-red-500 focus:ring-red-500"
+                                                                    placeholder="O que será feito?"
+                                                                    className="w-full p-2 text-sm border border-gray-200 rounded-md focus:border-red-400 focus:ring-1 focus:ring-red-400"
                                                                 />
-                                                                <input 
-                                                                    type="date" 
-                                                                    value={result.actionPlan?.deadline || ''}
-                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
-                                                                    disabled={isReadOnly}
-                                                                    className="w-1/2 p-2 text-sm border border-red-200 rounded-lg focus:border-red-500 focus:ring-red-500"
-                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={result.actionPlan?.responsible || ''}
+                                                                        onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
+                                                                        disabled={isReadOnly}
+                                                                        placeholder="Quem?"
+                                                                        className="w-1/2 p-2 text-sm border border-gray-200 rounded-md focus:border-red-400 focus:ring-1 focus:ring-red-400"
+                                                                    />
+                                                                    <input 
+                                                                        type="date" 
+                                                                        value={result.actionPlan?.deadline || ''}
+                                                                        onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
+                                                                        disabled={isReadOnly}
+                                                                        className="w-1/2 p-2 text-sm border border-gray-200 rounded-md focus:border-red-400 focus:ring-1 focus:ring-red-400"
+                                                                    />
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 })}
@@ -463,6 +434,40 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                 </div>
             )}
         </div>
+        
+        {/* Mobile Tabs (Category Icons) - BOTTOM NAVIGATION (APP STYLE) */}
+        <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex overflow-x-auto no-scrollbar z-20 h-20 items-center border-t border-gray-100">
+             {CHECKLIST_DEFINITIONS.map(cat => {
+                 const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
+                 const isActive = activeCategoryId === cat.id;
+                 const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
+                 const filledCount = reportData.results.filter(r => catItemIds.includes(r.itemId) && r.status !== null).length;
+                 const totalCount = catItemIds.length;
+                 const isComplete = filledCount === totalCount;
+                 
+                 return (
+                    <button
+                        key={cat.id}
+                        onClick={() => setActiveCategoryId(cat.id)}
+                        className={`flex-1 min-w-[20%] h-full flex flex-col items-center justify-center relative transition-colors ${isActive ? 'text-blue-600 bg-blue-50/50' : 'text-gray-400'}`}
+                    >
+                        <div className={`relative p-1`}>
+                            <Icon className={`h-6 w-6 ${isActive ? 'scale-110 transform' : ''} transition-transform`} />
+                            {/* Mini Badge for completion */}
+                            {isComplete && (
+                                <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border border-white">
+                                    <CheckIcon className="h-2 w-2 text-white"/>
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-[10px] font-bold mt-1 leading-none">{cat.title.split(' ')[0]}</span>
+                        
+                        {isActive && <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+                    </button>
+                 )
+             })}
+        </div>
+
       </div>
     </div>
   );

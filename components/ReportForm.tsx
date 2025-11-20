@@ -161,6 +161,27 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
 
   const handleSave = (status: 'Draft' | 'Completed') => {
       if (status === 'Completed') {
+          // Validação: Verificar se todos os itens foram respondidos
+          const categoryItemIds = CHECKLIST_DEFINITIONS.flatMap(cat => cat.subCategories.flatMap(sc => sc.items.map(i => i.id)));
+          const unansweredItem = categoryItemIds.find(itemId => {
+              const result = reportData.results.find(r => r.itemId === itemId);
+              return !result || result.status === null;
+          });
+
+          if (unansweredItem) {
+              const itemDef = CHECKLIST_DEFINITIONS.flatMap(c => c.subCategories.flatMap(sc => sc.items)).find(i => i.id === unansweredItem);
+              alert(`Não é possível finalizar.\n\nO item abaixo ainda não foi avaliado:\n"${itemDef?.text.substring(0, 50)}..."`);
+              return;
+          }
+
+          // Validação: Verificar se NC tem plano de ação
+          const invalidNC = reportData.results.find(r => r.status === InspectionStatus.NC && (!r.actionPlan?.actions));
+          if (invalidNC) {
+              const itemDef = CHECKLIST_DEFINITIONS.flatMap(c => c.subCategories.flatMap(sc => sc.items)).find(i => i.id === invalidNC.itemId);
+              alert(`Não é possível finalizar.\n\nO item "Não Conforme" abaixo precisa de um Plano de Ação:\n"${itemDef?.text.substring(0, 50)}..."`);
+              return;
+          }
+
           if (userProfile.role === 'manager') {
                setSigningRole('manager');
                setShowGovLogin(true);
@@ -231,7 +252,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                     const Icon = categoryIcons[cat.id] || CubeTransparentIcon;
                     const isActive = activeCategoryId === cat.id;
                     
-                    // Contagem de pendências (itens sem resposta)
                     const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
                     const filledCount = reportData.results.filter(r => catItemIds.includes(r.itemId) && r.status !== null).length;
                     const totalCount = catItemIds.length;
@@ -286,7 +306,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                     </div>
 
                     {activeCategory.subCategories.map(subCat => (
-                        <div key={subCat.title} className="bg-white border rounded-lg overflow-hidden">
+                        <div key={subCat.title} className="bg-white border rounded-lg overflow-hidden shadow-sm">
                             <div className="bg-gray-100 px-4 py-2 border-b">
                                 <h3 className="font-semibold text-gray-700">{subCat.title}</h3>
                             </div>
@@ -296,40 +316,62 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                                     if (!result) return null;
 
                                     return (
-                                        <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors">
-                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                                <div className="flex-1">
-                                                    <p className="text-gray-800 text-sm mb-2">{item.text}</p>
-                                                    {result.previousNc && (
-                                                        <div className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
-                                                            <ExclamationTriangleIcon className="h-3 w-3 mr-1"/>
-                                                            Reincidência (NC Anterior)
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                
-                                                {/* Status Selector */}
-                                                <div className="flex bg-gray-200 rounded-lg p-1 self-start flex-shrink-0">
-                                                    {[
-                                                        { value: InspectionStatus.C, label: 'C', color: 'bg-green-500 text-white', fullLabel: 'Conforme' },
-                                                        { value: InspectionStatus.NC, label: 'NC', color: 'bg-red-500 text-white', fullLabel: 'Não Conforme' },
-                                                        { value: InspectionStatus.NA, label: 'NA', color: 'bg-gray-500 text-white', fullLabel: 'Não Aplicável' },
-                                                    ].map(opt => (
-                                                        <button
-                                                            key={opt.value}
-                                                            onClick={() => handleResultChange(item.id, { status: opt.value as InspectionStatus })}
-                                                            disabled={isReadOnly}
-                                                            className={`w-10 h-8 flex items-center justify-center text-xs font-bold rounded-md transition-all ${result.status === opt.value ? opt.color + ' shadow-md' : 'text-gray-500 hover:bg-gray-300'}`}
-                                                            title={opt.fullLabel}
-                                                        >
-                                                            {opt.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                        <div key={item.id} className="p-5 hover:bg-gray-50 transition-colors">
+                                            {/* Question Text & Previous Warning */}
+                                            <div className="mb-4">
+                                                <p className="text-gray-800 text-base font-medium mb-2">{item.text}</p>
+                                                {result.previousNc && (
+                                                    <div className="inline-flex items-center px-3 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200 animate-pulse">
+                                                        <ExclamationTriangleIcon className="h-4 w-4 mr-1"/>
+                                                        PENDÊNCIA DO RELATÓRIO ANTERIOR
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* Conditional Fields */}
-                                            <div className="mt-3 space-y-3">
+                                            {/* Botões de Ação - Layout Clássico */}
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <button
+                                                    onClick={() => handleResultChange(item.id, { status: InspectionStatus.C })}
+                                                    disabled={isReadOnly}
+                                                    className={`flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                                                        result.status === InspectionStatus.C 
+                                                        ? 'bg-green-500 border-green-600 text-white shadow-md transform scale-105' 
+                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-green-300 hover:bg-green-50'
+                                                    }`}
+                                                >
+                                                    <CheckIcon className="h-8 w-8 mb-1" />
+                                                    <span className="text-xs font-bold">Conforme</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleResultChange(item.id, { status: InspectionStatus.NC })}
+                                                    disabled={isReadOnly}
+                                                    className={`flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                                                        result.status === InspectionStatus.NC 
+                                                        ? 'bg-red-500 border-red-600 text-white shadow-md transform scale-105' 
+                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:bg-red-50'
+                                                    }`}
+                                                >
+                                                    <XMarkIcon className="h-8 w-8 mb-1" />
+                                                    <span className="text-xs font-bold">Não Conforme</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleResultChange(item.id, { status: InspectionStatus.NA })}
+                                                    disabled={isReadOnly}
+                                                    className={`flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                                                        result.status === InspectionStatus.NA 
+                                                        ? 'bg-gray-500 border-gray-600 text-white shadow-md transform scale-105' 
+                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-gray-400 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <MinusIcon className="h-8 w-8 mb-1" />
+                                                    <span className="text-xs font-bold">N/A</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Campos Condicionais (Fotos, Comentários, Plano de Ação) */}
+                                            <div className="mt-3 space-y-3 pl-1">
                                                 {/* Photos */}
                                                 <PhotoUploader 
                                                     photos={result.photos} 
@@ -340,47 +382,51 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                                                 
                                                 {/* Comment */}
                                                 <textarea
-                                                    placeholder="Observações..."
+                                                    placeholder="Observações adicionais..."
                                                     value={result.comment}
                                                     onChange={e => handleResultChange(item.id, { comment: e.target.value })}
                                                     disabled={isReadOnly}
-                                                    className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                                    className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-gray-50 focus:bg-white transition-colors"
                                                     rows={2}
                                                 />
 
                                                 {/* Action Plan (Only if NC) */}
                                                 {result.status === InspectionStatus.NC && (
-                                                    <div className="bg-red-50 p-3 rounded-md border border-red-100 mt-2 animate-fade-in">
-                                                        <h4 className="text-xs font-bold text-red-700 uppercase mb-2">Plano de Ação Obrigatório</h4>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div className="bg-red-50 p-4 rounded-lg border border-red-200 mt-4 animate-fade-in shadow-sm">
+                                                        <div className="flex items-center mb-3 text-red-700">
+                                                            <ExclamationTriangleIcon className="h-5 w-5 mr-2"/>
+                                                            <h4 className="text-sm font-bold uppercase">Plano de Ação Obrigatório</h4>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             <div className="md:col-span-2">
-                                                                <label className="block text-xs font-medium text-gray-700">O que será feito?</label>
+                                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">O que será feito?</label>
                                                                 <input 
                                                                     type="text" 
                                                                     value={result.actionPlan?.actions || ''}
                                                                     onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
                                                                     disabled={isReadOnly}
-                                                                    className="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                                                    placeholder="Descreva a ação corretiva..."
+                                                                    className="w-full p-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs font-medium text-gray-700">Responsável</label>
+                                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Responsável</label>
                                                                 <input 
                                                                     type="text" 
                                                                     value={result.actionPlan?.responsible || ''}
                                                                     onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
                                                                     disabled={isReadOnly}
-                                                                    className="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                                                    className="w-full p-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs font-medium text-gray-700">Prazo</label>
+                                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Prazo Limite</label>
                                                                 <input 
                                                                     type="date" 
                                                                     value={result.actionPlan?.deadline || ''}
                                                                     onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
                                                                     disabled={isReadOnly}
-                                                                    className="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                                                    className="w-full p-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
                                                                 />
                                                             </div>
                                                         </div>

@@ -1,23 +1,26 @@
 
-import { User } from '../types';
+import { UserProfile } from '../types';
 
-export const MOCK_USERS: User[] = [
+export const MOCK_USERS: UserProfile[] = [
   {
     id: 'user-1',
-    name: 'Diretoria',
-    role: 'Diretoria',
-    projectIds: ['proj-1', 'proj-2', 'proj-3'], // Acesso a todos os projetos
+    email: 'diretoria@example.com',
+    full_name: 'Diretoria',
+    role: 'admin',
+    assigned_project_ids: ['proj-1', 'proj-2', 'proj-3'], // Acesso a todos os projetos
   },
   {
     id: 'user-2',
-    name: 'Engenheiro - Novara',
-    role: 'Engenheiro',
-    projectIds: ['proj-1'], // Acesso apenas ao projeto 1
+    email: 'eng.novara@example.com',
+    full_name: 'Engenheiro - Novara',
+    role: 'manager',
+    assigned_project_ids: ['proj-1'], // Acesso apenas ao projeto 1
   },
   {
     id: 'user-3',
-    name: 'Engenheiro - Vista do Vale',
-    role: 'Engenheiro',
-    projectIds: ['proj-2'], // Acesso apenas ao projeto 2
+    email: 'eng.vistavale@example.com',
+    full_name: 'Engenheiro - Vista do Vale',
+    role: 'manager',
+    assigned_project_ids: ['proj-2'], // Acesso apenas ao projeto 2
   },
 ];

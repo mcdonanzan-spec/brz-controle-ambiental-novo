@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Project, Report, InspectionStatus } from '../types';
+import { Project, Report, InspectionStatus, UserRole } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
 import { ArrowLeftIcon, PlusIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon } from './icons';
 
@@ -10,6 +11,7 @@ interface ProjectDashboardProps {
   onNewReport: () => void;
   onEditReportCategory: (report: Report, categoryId: string) => void;
   onBack: () => void;
+  userRole: UserRole;
 }
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
@@ -65,10 +67,12 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
     );
 };
 
-const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, onViewReport, onNewReport, onEditReportCategory, onBack }) => {
+const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, onViewReport, onNewReport, onEditReportCategory, onBack, userRole }) => {
 
   const latestReport = reports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
   const isLatestReportCompleted = latestReport?.status === 'Completed';
+  const canCreateOrEdit = userRole === 'admin' || userRole === 'assistant' || userRole === 'manager'; 
+  // Manager can also edit to sign
 
   const getCategoryStatus = (categoryId: string) => {
       if (!latestReport) return { isComplete: false };
@@ -93,19 +97,22 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
                 <h1 className="text-3xl font-bold text-gray-800">{project.name}</h1>
                 <p className="text-md text-gray-500">{project.location}</p>
             </div>
-            <button
-              onClick={() => (latestReport && !isLatestReportCompleted) ? onEditReportCategory(latestReport, 'massa') : onNewReport()}
-              className="flex items-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition duration-300"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              {(latestReport && !isLatestReportCompleted) ? 'Continuar Inspeção' : 'Nova Inspeção'}
-            </button>
+            
+            {canCreateOrEdit && (
+                <button
+                  onClick={() => (latestReport && !isLatestReportCompleted) ? onEditReportCategory(latestReport, 'massa') : onNewReport()}
+                  className="flex items-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition duration-300"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  {(latestReport && !isLatestReportCompleted) ? 'Continuar Inspeção' : 'Nova Inspeção'}
+                </button>
+            )}
         </div>
       
         { !latestReport ? (
             <div className="text-center py-16 bg-white rounded-lg shadow-md">
                 <p className="text-gray-600 font-semibold text-lg">Nenhum relatório encontrado para esta obra.</p>
-                <p className="text-gray-400 text-sm mt-2">Clique em "Nova Inspeção" para começar.</p>
+                {canCreateOrEdit && <p className="text-gray-400 text-sm mt-2">Clique em "Nova Inspeção" para começar.</p>}
             </div>
         ) : (
             <>

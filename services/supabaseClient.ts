@@ -1,24 +1,35 @@
-
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Em um ambiente Vercel real, use variáveis de ambiente.
-// Para desenvolvimento local sem travar, validamos se a string é uma URL real.
-const SUPABASE_URL = 'SUA_URL_DO_SUPABASE_AQUI';
-const SUPABASE_KEY = 'SUA_ANON_KEY_DO_SUPABASE_AQUI';
+// --- CONFIGURAÇÃO ---
+// A Vercel injetará estes valores automaticamente se configurados nas Environment Variables.
+// Se você estiver rodando localmente ou se a Vercel falhar em injetar, 
+// você pode colar suas chaves DIRETAMENTE aqui entre as aspas (apenas para teste, não recomendado para produção pública).
+
+const SUPABASE_URL = (import.meta as any).env.VITE_SUPABASE_URL || ''; 
+const SUPABASE_KEY = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
+
+// --------------------
 
 let client: SupabaseClient | null = null;
 
-// Verificação simples para evitar erro de "Invalid URL" se as credenciais não estiverem configuradas
-const isConfigured = SUPABASE_URL && SUPABASE_URL.startsWith('https://');
+const isValidUrl = (url: string) => {
+    try {
+        return url && url.startsWith('https://');
+    } catch {
+        return false;
+    }
+}
 
-if (isConfigured) {
+if (isValidUrl(SUPABASE_URL) && SUPABASE_KEY) {
     try {
         client = createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log('Supabase conectado com sucesso!');
     } catch (error) {
-        console.warn('Falha ao inicializar cliente Supabase. A aplicação funcionará em modo offline/demo.', error);
+        console.warn('Erro ao conectar Supabase:', error);
     }
 } else {
-    console.log('Supabase não configurado. A aplicação funcionará em modo offline/demo usando LocalStorage.');
+    console.log('Supabase não configurado ou chaves inválidas. Usando modo Offline (LocalStorage).');
+    console.log('Para conectar: Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas variáveis de ambiente da Vercel.');
 }
 
 export const supabase = client;

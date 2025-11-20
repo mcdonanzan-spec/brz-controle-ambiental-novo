@@ -1,55 +1,97 @@
 
 import React, { useState, useEffect } from 'react';
-import { Project, Report, User } from './types';
-import { fetchProjects, fetchReports, upsertReport, getNewReportTemplate } from './services/dbApi'; // Trocado para dbApi
-import { MOCK_USERS } from './services/mockUsers';
+import { Project, Report, UserProfile } from './types';
+import { fetchProjects, fetchReports, upsertReport, getNewReportTemplate } from './services/dbApi';
+import { getCurrentProfile, signOut } from './services/auth';
+import AuthScreen from './components/AuthScreen';
+import AdminPanel from './components/AdminPanel';
 import Dashboard from './components/Dashboard';
 import ProjectDashboard from './components/ProjectDashboard';
 import ReportForm from './components/ReportForm';
 import ReportView from './components/ReportView';
 import PendingActions from './components/PendingActions';
 import Toast from './components/Toast';
-import { LogoIcon, MascotIcon, ChartPieIcon, BuildingOfficeIcon, UserCircleIcon } from './components/icons';
+import { LogoIcon, MascotIcon, ChartPieIcon, BuildingOfficeIcon, UserCircleIcon, WrenchScrewdriverIcon } from './components/icons';
 
-type View = 'SITES_LIST' | 'PROJECT_DASHBOARD' | 'REPORT_FORM' | 'REPORT_VIEW' | 'MANAGEMENT_DASHBOARD' | 'PENDING_ACTIONS';
+type View = 'SITES_LIST' | 'PROJECT_DASHBOARD' | 'REPORT_FORM' | 'REPORT_VIEW' | 'MANAGEMENT_DASHBOARD' | 'PENDING_ACTIONS' | 'ADMIN_PANEL';
 
 const App: React.FC = () => {
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  
   const [view, setView] = useState<View>('SITES_LIST');
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); 
   const [projects, setProjects] = useState<Project[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Loading state
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [initialCategoryId, setInitialCategoryId] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string>('');
 
-  const loadData = async () => {
+  const checkUser = async () => {
+      setIsLoading(true);
+      try {
+        const profile = await getCurrentProfile();
+        setUserProfile(profile);
+        if(profile) await loadData(profile);
+      } catch(e) {
+          console.error(e);
+      } finally {
+          setSessionChecked(true);
+          setIsLoading(false);
+      }
+  }
+
+  const loadData = async (profile: UserProfile) => {
      setIsLoading(true);
      try {
-        const p = await fetchProjects();
-        const r = await fetchReports();
-        setProjects(p);
-        setReports(r);
+        const allProjects = await fetchProjects();
+        const allReports = await fetchReports();
+        
+        setProjects(allProjects);
+        setReports(allReports);
      } catch (error) {
         console.error("Falha ao carregar dados", error);
-        setToastMessage("Erro ao conectar com o servidor.");
+        setToastMessage("Erro ao carregar dados do servidor.");
      } finally {
         setIsLoading(false);
      }
   };
 
   useEffect(() => {
-    loadData();
-  }, [currentUser]);
+    checkUser();
+  }, []);
+
+  // Filters
+  const getAuthorizedProjects = () => {
+      if (!userProfile) return [];
+      if (userProfile.role === 'admin') return projects;
+      return projects.filter(p => userProfile.assigned_project_ids?.includes(p.id));
+  }
+
+  const getAuthorizedReports = () => {
+      if (!userProfile) return [];
+      const authorizedProjectIds = userProfile.role === 'admin' 
+        ? projects.map(p => p.id) 
+        : userProfile.assigned_project_ids || [];
+        
+      return reports.filter(r => authorizedProjectIds.includes(r.projectId));
+  }
   
-  const filteredProjects = projects.filter(p => currentUser.role === 'Diretoria' || currentUser.projectIds.includes(p.id));
-  const filteredReports = reports.filter(r => {
-      const projectForReport = projects.find(p => p.id === r.projectId);
-      if (!projectForReport) return false;
-      return currentUser.role === 'Diretoria' || currentUser.projectIds.includes(projectForReport.id);
-  });
+  const authorizedProjects = getAuthorizedProjects();
+  const authorizedReports = getAuthorizedReports();
+
+  // Handlers
+  const handleLoginSuccess = () => {
+      checkUser();
+  }
+  
+  const handleLogout = async () => {
+      await signOut();
+      setUserProfile(null);
+      setView('SITES_LIST');
+  }
 
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);
@@ -86,40 +128,23 @@ const App: React.FC = () => {
     setView('REPORT_FORM');
   }
 
-  const handleSaveReport = async (status: 'Draft' | 'Completed') => {
-    setIsLoading(true); // Show loading during save/upload
-    await loadData(); // Refresh to get latest before saving context? Or just saving.
-    // Logic moved inside components/ReportForm normally, but here we handle the callback
-    // We need to trigger the actual save inside the form or pass the function down.
-    // Since ReportForm calls onSave *after* saving in the mock, we need to adjust ReportForm
-    // BUT, ReportForm currently calls saveReport directly.
-    // We will rely on the refreshed data below.
-    
-    if (status === 'Draft') {
-        setToastMessage('Rascunho salvo com sucesso!');
-    } else {
-        setToastMessage('Relatório concluído e enviado!');
-    }
-    
-    setIsLoading(false);
-
-    if (selectedProject) {
-      setView('PROJECT_DASHBOARD');
-    } else {
-      setView('SITES_LIST');
-    }
-  };
-  
-  // Wrapper para injetar a prop de salvamento async no ReportForm
   const handleAsyncSave = async (data: any, status: 'Draft' | 'Completed') => {
+      if (!userProfile) return;
       setIsLoading(true);
       try {
+          // Se for admin ou assistant, pode assinar como inspector
+          // Se for manager, pode assinar como manager
+          // A lógica está dentro do ReportForm, mas garantimos aqui o refresh
           await upsertReport({ ...data, status });
-          await loadData();
-          handleSaveReport(status);
+          await loadData(userProfile);
+          setToastMessage(status === 'Draft' ? 'Rascunho salvo!' : 'Relatório concluído!');
+          
+          if (selectedProject) setView('PROJECT_DASHBOARD');
+          else setView('SITES_LIST');
       } catch (e) {
           setToastMessage("Erro ao salvar relatório.");
-          setIsLoading(false);
+      } finally {
+        setIsLoading(false);
       }
   }
 
@@ -129,19 +154,16 @@ const App: React.FC = () => {
     setView('SITES_LIST');
   };
   
-  const UserSwitcher: React.FC = () => (
-      <div className="flex items-center space-x-2">
-          <UserCircleIcon className="h-6 w-6 text-gray-600"/>
-          <select value={currentUser.id} onChange={(e) => setCurrentUser(MOCK_USERS.find(u => u.id === e.target.value)!)} className="font-semibold text-gray-700 bg-transparent border-none focus:ring-0">
-              {MOCK_USERS.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-          </select>
-      </div>
-  )
+  // Renderers
+  if (!sessionChecked) return <div className="h-screen flex items-center justify-center"><div className="animate-spin h-10 w-10 border-4 border-blue-600 rounded-full border-t-transparent"></div></div>;
   
+  if (!userProfile) return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
+
   const Header: React.FC = () => {
     let title = 'Painel de Obras';
     if (view === 'MANAGEMENT_DASHBOARD') title = 'Dashboard Gerencial';
     else if (view === 'PENDING_ACTIONS') title = 'Central de Pendências';
+    else if (view === 'ADMIN_PANEL') title = 'Administração';
     else if (view === 'PROJECT_DASHBOARD' && selectedProject) title = selectedProject.name;
     else if (view === 'REPORT_FORM' || view === 'REPORT_VIEW') title = 'Relatório de Inspeção';
     
@@ -155,13 +177,29 @@ const App: React.FC = () => {
       <div className="hidden md:block text-md font-semibold text-gray-700">
         {title}
       </div>
-      <UserSwitcher/>
+      <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+              <p className="text-sm font-bold text-gray-800">{userProfile.full_name}</p>
+              <p className="text-xs text-gray-500 capitalize">{userProfile.role === 'admin' ? 'Diretoria' : userProfile.role === 'manager' ? 'Engenheiro' : 'Assistente'}</p>
+          </div>
+          <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-800 font-medium border border-red-200 rounded px-2 py-1">Sair</button>
+      </div>
     </header>
   )};
 
   const SitesList: React.FC = () => {
-    const data = filteredProjects.map(project => {
-      const projectReports = filteredReports.filter(r => r.projectId === project.id);
+    if (authorizedProjects.length === 0) {
+        return (
+            <div className="text-center py-20">
+                <BuildingOfficeIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-600">Nenhuma obra vinculada</h2>
+                <p className="text-gray-500">Solicite à diretoria o acesso às suas obras.</p>
+            </div>
+        )
+    }
+  
+    const data = authorizedProjects.map(project => {
+      const projectReports = authorizedReports.filter(r => r.projectId === project.id);
       const lastReport = projectReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
       const score = lastReport ? lastReport.score : null;
       const pendingActions = projectReports.flatMap(r => r.results).filter(res => res.status === 'Não Conforme' && (!res.actionPlan || !res.actionPlan.actions)).length;
@@ -215,11 +253,12 @@ const App: React.FC = () => {
         return (
           <ProjectDashboard
             project={selectedProject}
-            reports={filteredReports.filter(r => r.projectId === selectedProject.id)}
+            reports={authorizedReports.filter(r => r.projectId === selectedProject.id)}
             onViewReport={handleViewReport}
             onNewReport={() => handleCreateNewReport(selectedProject)}
             onEditReportCategory={handleEditReportCategory}
             onBack={navigateToSitesList}
+            userRole={userProfile?.role || 'viewer'}
           />
         );
       case 'REPORT_FORM':
@@ -228,6 +267,7 @@ const App: React.FC = () => {
           <ReportForm
             project={selectedProject}
             existingReport={editingReport}
+            userProfile={userProfile!}
             onSave={(data, status) => handleAsyncSave(data, status)}
             onCancel={() => selectedProject ? setView('PROJECT_DASHBOARD') : navigateToSitesList()}
             initialCategoryId={initialCategoryId}
@@ -243,12 +283,15 @@ const App: React.FC = () => {
             project={projectForReport}
             onBack={() => setView('PROJECT_DASHBOARD')}
             onEdit={handleEditReport}
+            userRole={userProfile?.role || 'viewer'}
           />
         );
       case 'MANAGEMENT_DASHBOARD':
-        return <Dashboard projects={projects} reports={reports} onSelectProject={handleSelectProject} onNavigateToSites={navigateToSitesList} onNavigateToPendingActions={handleNavigateToPendingActions} />;
+        return <Dashboard projects={authorizedProjects} reports={authorizedReports} onSelectProject={handleSelectProject} onNavigateToSites={navigateToSitesList} onNavigateToPendingActions={handleNavigateToPendingActions} />;
       case 'PENDING_ACTIONS':
-        return <PendingActions projects={projects} reports={reports} onNavigateToReportItem={handleEditReportCategory} onBack={() => setView('MANAGEMENT_DASHBOARD')}/>;
+        return <PendingActions projects={authorizedProjects} reports={authorizedReports} onNavigateToReportItem={handleEditReportCategory} onBack={() => setView('MANAGEMENT_DASHBOARD')}/>;
+      case 'ADMIN_PANEL':
+          return <AdminPanel projects={projects} onRefreshData={() => loadData(userProfile!)} />;
       case 'SITES_LIST':
       default:
         return <SitesList />;
@@ -256,12 +299,13 @@ const App: React.FC = () => {
   };
   
   const BottomNav: React.FC = () => {
-    const navItems: { view: View; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>>; roles: User['role'][] }[] = [
-      { view: 'SITES_LIST', label: 'Obras', icon: BuildingOfficeIcon, roles: ['Diretoria', 'Engenheiro'] },
-      { view: 'MANAGEMENT_DASHBOARD', label: 'Gerencial', icon: ChartPieIcon, roles: ['Diretoria'] },
+    const navItems = [
+      { view: 'SITES_LIST' as View, label: 'Obras', icon: BuildingOfficeIcon, roles: ['admin', 'manager', 'assistant', 'viewer'] },
+      { view: 'MANAGEMENT_DASHBOARD' as View, label: 'Gerencial', icon: ChartPieIcon, roles: ['admin', 'manager'] },
+      { view: 'ADMIN_PANEL' as View, label: 'Admin', icon: WrenchScrewdriverIcon, roles: ['admin'] },
     ];
     
-    const availableNavItems = navItems.filter(item => item.roles.includes(currentUser.role));
+    const availableNavItems = navItems.filter(item => item.roles.includes(userProfile?.role || 'viewer'));
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] flex justify-around items-center z-50 h-16">

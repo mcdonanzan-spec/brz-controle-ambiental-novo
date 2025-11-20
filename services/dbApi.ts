@@ -10,28 +10,34 @@ const STORAGE_KEYS = {
 
 // --- Helpers LocalStorage (Modo Offline) ---
 const getLocalProjects = (): Project[] => {
-    const stored = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-    return stored ? JSON.parse(stored) : [];
+    try {
+        const stored = localStorage.getItem(STORAGE_KEYS.PROJECTS);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) { return []; }
 };
 
 const saveLocalProjects = (projects: Project[]) => {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    try { localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)); } catch(e){}
 };
 
 const getLocalReports = (): Report[] => {
-    const stored = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    return stored ? JSON.parse(stored) : [];
+    try {
+        const stored = localStorage.getItem(STORAGE_KEYS.REPORTS);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) { return []; }
 };
 
 const saveLocalReport = (report: Report) => {
-    const reports = getLocalReports();
-    const index = reports.findIndex(r => r.id === report.id);
-    if (index >= 0) {
-        reports[index] = report;
-    } else {
-        reports.push(report);
-    }
-    localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+    try {
+        const reports = getLocalReports();
+        const index = reports.findIndex(r => r.id === report.id);
+        if (index >= 0) {
+            reports[index] = report;
+        } else {
+            reports.push(report);
+        }
+        localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+    } catch(e){}
 };
 
 // --- Helper Utils ---
@@ -73,73 +79,84 @@ const calculateScores = (results: InspectionItemResult[]) => {
 
 // --- API Methods ---
 
-export const fetchProjects = async (): Promise<Project[]> => {
-  if (!supabase) {
-    let projects = getLocalProjects();
-    if (projects.length === 0) {
-        projects = MOCK_PROJECTS;
-        saveLocalProjects(projects);
+export const upsertProject = async (project: Project): Promise<void> => {
+    if (supabase) {
+        const { error } = await supabase.from('projects').upsert(project);
+        if (error) throw error;
+        return;
     }
-    return projects;
+    // Offline
+    const projects = getLocalProjects();
+    const existing = projects.findIndex(p => p.id === project.id);
+    if (existing >= 0) projects[existing] = project;
+    else projects.push(project);
+    saveLocalProjects(projects);
+}
+
+export const fetchProjects = async (): Promise<Project[]> => {
+  // Prioriza Supabase se disponível
+  if (supabase) {
+      const { data, error } = await supabase.from('projects').select('*');
+      if (!error && data && data.length > 0) {
+          return data as Project[];
+      }
+      // Se conectado mas tabela vazia, tenta inserir os Mocks para começar (apenas dev)
+      if (!error && data && data.length === 0) {
+          // Não insere mocks automaticamente em prod para não sujar, retorna vazio
+          return [];
+      }
   }
   
-  const { data, error } = await supabase.from('projects').select('*');
-  if (error || !data || data.length === 0) {
-      // Fallback to mock/local if DB is empty or error
-      console.warn("Supabase vazio ou indisponível, usando dados locais.");
-       let projects = getLocalProjects();
-        if (projects.length === 0) {
-            projects = MOCK_PROJECTS;
-            saveLocalProjects(projects);
-        }
-      return projects;
+  // Fallback Offline
+  let projects = getLocalProjects();
+  if (projects.length === 0) {
+      projects = MOCK_PROJECTS; // Mantém mocks apenas no offline total inicial
+      saveLocalProjects(projects);
   }
-  return data as Project[];
+  return projects;
 };
 
 export const fetchReports = async (): Promise<Report[]> => {
-  if (!supabase) {
-    return getLocalReports();
+  if (supabase) {
+      const { data, error } = await supabase.from('reports').select('*');
+      if (!error && data) {
+          return data.map((row: any) => ({
+            ...row.content,
+            projectId: row.project_id,
+            id: row.id
+          }));
+      }
   }
-
-  const { data, error } = await supabase.from('reports').select('*');
-  if (error) {
-    console.error('Error fetching reports:', error);
-    return getLocalReports(); // Fallback
-  }
-
-  return data.map((row: any) => ({
-    ...row.content,
-    projectId: row.project_id,
-    id: row.id
-  }));
+  return getLocalReports();
 };
 
 const uploadPhoto = async (photoId: string, base64Data: string): Promise<string | null> => {
-   if (!supabase) return base64Data; // Return original if no backend
+   if (!supabase) return base64Data;
    
    try {
     const blob = await base64ToBlob(base64Data);
-    const fileName = `${photoId}.jpg`;
+    // Nome do arquivo único
+    const fileName = `${photoId}-${Date.now()}.jpg`;
+    
     const { error } = await supabase.storage
       .from('inspection-photos')
       .upload(fileName, blob, { upsert: true });
 
     if (error) throw error;
 
-    const { data: { publicUrl } } = supabase.storage
+    const { data } = supabase.storage
       .from('inspection-photos')
       .getPublicUrl(fileName);
 
-    return publicUrl;
+    return data.publicUrl;
   } catch (error) {
-    console.error('Error uploading photo:', error);
-    return base64Data; // Fallback to base64 if upload fails
+    console.error('Erro uploading photo:', error);
+    return base64Data; // Se falhar upload, salva o base64 mesmo
   }
 };
 
 export const upsertReport = async (reportData: Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> & { id?: string }): Promise<Report | null> => {
-  // Process photos
+  // 1. Processar fotos (Upload)
   const processedResults = await Promise.all(reportData.results.map(async (item) => {
     if (item.photos && item.photos.length > 0) {
       const newPhotos = await Promise.all(item.photos.map(async (photo) => {
@@ -154,35 +171,33 @@ export const upsertReport = async (reportData: Omit<Report, 'id' | 'score' | 'ev
     return item;
   }));
 
-  // Calculate scores
+  // 2. Calcular scores
   const { score, evaluation, categoryScores } = calculateScores(processedResults);
   
   const id = reportData.id || `report-${Date.now()}`;
   const fullReportData: Report = { ...reportData, results: processedResults, score, evaluation, categoryScores, id };
 
-  if (!supabase) {
-      saveLocalReport(fullReportData);
-      return fullReportData;
+  // 3. Salvar no Banco
+  if (supabase) {
+      const { error } = await supabase
+        .from('reports')
+        .upsert({
+          id: id,
+          project_id: fullReportData.projectId,
+          content: fullReportData,
+          created_at: new Date().toISOString()
+        });
+        
+      if (!error) return fullReportData;
+      console.error('Erro ao salvar no Supabase:', error);
   }
 
-  const { error } = await supabase
-    .from('reports')
-    .upsert({
-      id: id,
-      project_id: fullReportData.projectId,
-      content: fullReportData,
-      created_at: new Date().toISOString()
-    });
-
-  if (error) {
-    console.error('Supabase error, saving locally:', error);
-    saveLocalReport(fullReportData); // Fallback
-  }
-
+  // Fallback Local
+  saveLocalReport(fullReportData);
   return fullReportData;
 };
 
-export const getNewReportTemplate = (projectId: string): Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> => {
+export const getNewReportTemplate = (projectId: string, inspectorName: string, inspectorId: string): Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> => {
   const allItems = CHECKLIST_DEFINITIONS.flatMap(cat => cat.subCategories.flatMap(sub => sub.items));
   
   const results: InspectionItemResult[] = allItems.map(item => ({
@@ -201,7 +216,8 @@ export const getNewReportTemplate = (projectId: string): Omit<Report, 'id' | 'sc
   return {
     projectId,
     date: new Date().toISOString().split('T')[0],
-    inspector: 'Gediel da Silva', 
+    inspector: inspectorName, 
+    inspectorId: inspectorId,
     status: 'Draft',
     results,
     signatures: {

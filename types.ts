@@ -33,12 +33,15 @@ export interface Report {
   id: string;
   projectId: string;
   date: string;
-  inspector: string;
+  inspector: string; // Nome do usuário que criou
+  inspectorId: string; // ID do usuário
   status: 'Draft' | 'Completed';
   results: InspectionItemResult[];
   signatures: {
-    inspector: string;
-    manager: string;
+    inspector: string; // Assinatura Meio Ambiente
+    inspectorDate?: string;
+    manager: string; // Assinatura Eng. Gerente
+    managerDate?: string;
   };
   score: number;
   evaluation: string;
@@ -67,9 +70,12 @@ export interface ChecklistCategory {
   subCategories: ChecklistSubCategory[];
 }
 
-export interface User {
+export type UserRole = 'admin' | 'manager' | 'assistant' | 'viewer';
+
+export interface UserProfile {
   id: string;
-  name: string;
-  role: 'Diretoria' | 'Engenheiro';
-  projectIds: string[];
+  email: string;
+  full_name: string;
+  role: UserRole;
+  assigned_project_ids: string[];
 }

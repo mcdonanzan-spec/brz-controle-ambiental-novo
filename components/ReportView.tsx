@@ -1,17 +1,18 @@
 
 import React from 'react';
-import { Report, Project, InspectionStatus } from '../types';
+import { Report, Project, InspectionStatus, UserRole } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { ArrowLeftIcon, PencilIcon, CameraIcon } from './icons';
+import { ArrowLeftIcon, PencilIcon } from './icons';
 
 interface ReportViewProps {
   report: Report;
   project: Project;
   onBack: () => void;
   onEdit: (report: Report) => void;
+  userRole: UserRole;
 }
 
-const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit }) => {
+const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit, userRole }) => {
   const getStatusBadge = (status: InspectionStatus | null) => {
     switch (status) {
       case InspectionStatus.C:
@@ -34,6 +35,10 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+  
+  // Managers can edit completed reports ONLY to add their signature if missing
+  // Otherwise only edit drafts
+  const canEdit = report.status === 'Draft' || (userRole === 'manager' && !report.signatures.manager);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
@@ -41,13 +46,13 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
         <div>
           <button onClick={onBack} className="flex items-center text-sm text-blue-600 hover:underline mb-2">
             <ArrowLeftIcon className="h-4 w-4 mr-1" />
-            Back to Project
+            Voltar
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Inspection Report</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Relatório de Inspeção</h1>
           <p className="text-gray-600">{project.name} - {new Date(report.date).toLocaleDateString()}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-500">Inspector</p>
+          <p className="text-sm text-gray-500">Inspetor</p>
           <p className="font-semibold text-gray-800">{report.inspector}</p>
           <div className="mt-2">
             <span className={`px-3 py-1 text-sm font-bold rounded-full ${getEvaluationChip(report.evaluation)}`}>
@@ -57,14 +62,14 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
         </div>
       </div>
       
-       {report.status === 'Draft' && (
+       {canEdit && (
          <div className="flex justify-end mb-4">
             <button
               onClick={() => onEdit(report)}
               className="flex items-center bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-yellow-600 transition duration-300 text-sm"
             >
               <PencilIcon className="h-4 w-4 mr-2" />
-              Edit Draft
+              {report.status === 'Draft' ? 'Editar Rascunho' : 'Assinar/Editar'}
             </button>
          </div>
       )}
@@ -96,10 +101,10 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
                       )}
                       {result.status === InspectionStatus.NC && result.actionPlan && (
                         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md text-sm">
-                            <h5 className="font-bold text-red-700">Action Plan</h5>
-                            <p><span className="font-semibold">Action:</span> {result.actionPlan.actions}</p>
-                            <p><span className="font-semibold">Responsible:</span> {result.actionPlan.responsible}</p>
-                            <p><span className="font-semibold">Deadline:</span> {result.actionPlan.deadline}</p>
+                            <h5 className="font-bold text-red-700">Plano de Ação</h5>
+                            <p><span className="font-semibold">Ação:</span> {result.actionPlan.actions}</p>
+                            <p><span className="font-semibold">Responsável:</span> {result.actionPlan.responsible}</p>
+                            <p><span className="font-semibold">Prazo:</span> {result.actionPlan.deadline}</p>
                         </div>
                       )}
                     </li>
@@ -112,15 +117,17 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
       ))}
       
       <div className="mt-8 pt-4 border-t">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Signatures</h2>
+        <h2 className="text-xl font-semibold text-gray-700 mb-4">Assinaturas</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-500">Environmental Responsible</p>
-            <p className="font-serif text-lg text-gray-800 italic">{report.signatures.inspector || 'Not signed'}</p>
+            <p className="text-sm text-gray-500">Responsável Ambiental</p>
+            <p className="font-serif text-lg text-gray-800 italic">{report.signatures.inspector || 'Pendente'}</p>
+            {report.signatures.inspectorDate && <p className="text-xs text-gray-400">{report.signatures.inspectorDate}</p>}
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-500">Engineering Responsible</p>
-            <p className="font-serif text-lg text-gray-800 italic">{report.signatures.manager || 'Not signed'}</p>
+            <p className="text-sm text-gray-500">Engenheiro Gerente</p>
+            <p className="font-serif text-lg text-gray-800 italic">{report.signatures.manager || 'Pendente'}</p>
+             {report.signatures.managerDate && <p className="text-xs text-gray-400">{report.signatures.managerDate}</p>}
           </div>
         </div>
       </div>

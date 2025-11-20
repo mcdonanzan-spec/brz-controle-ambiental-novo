@@ -1,13 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan } from '../types';
+import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan, UserProfile } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { getNewReportTemplate } from '../services/dbApi'; // Usar o helper do dbApi
+import { getNewReportTemplate } from '../services/dbApi';
 import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon } from './icons';
 
 interface ReportFormProps {
   project: Project;
   existingReport: Report | null;
+  userProfile: UserProfile;
   onSave: (data: Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> & {id?: string}, status: 'Draft' | 'Completed') => void;
   onCancel: () => void;
   initialCategoryId?: string;
@@ -55,9 +56,9 @@ const PhotoUploader: React.FC<{ photos: Photo[], onAddPhoto: (photo: Photo) => v
   );
 };
 
-const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, onSave, onCancel, initialCategoryId }) => {
+const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userProfile, onSave, onCancel, initialCategoryId }) => {
   const [reportData, setReportData] = useState<Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> & {id?: string}>(
-    existingReport ? {...existingReport} : getNewReportTemplate(project.id)
+    existingReport ? {...existingReport} : getNewReportTemplate(project.id, userProfile.full_name, userProfile.id)
   );
   const [activeCategoryId, setActiveCategoryId] = useState<string>(initialCategoryId || CHECKLIST_DEFINITIONS[0].id);
 
@@ -91,16 +92,36 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, onSave
           handleResultChange(itemId, { actionPlan: { ...result.actionPlan!, ...newPlan } });
       }
   }
+  
+  const handleSignature = (role: 'inspector' | 'manager') => {
+      const dateStr = new Date().toLocaleString();
+      setReportData(prev => ({
+          ...prev,
+          signatures: {
+              ...prev.signatures,
+              [role]: userProfile.full_name,
+              [`${role}Date`]: dateStr
+          }
+      }));
+  }
 
   const handleSubmit = (status: 'Draft' | 'Completed') => {
     if (isReadOnly) return;
     
-    if (status === 'Completed' && (!reportData.signatures.inspector || !reportData.signatures.manager)) {
-        alert("Ambas as assinaturas são necessárias para concluir o relatório.");
-        return;
+    if (status === 'Completed') {
+        if (!reportData.signatures.inspector) {
+            alert("A assinatura do Responsável Ambiental é obrigatória para concluir.");
+            return;
+        }
+        if (!reportData.signatures.manager) {
+             // Regra de negócio: O gerente não precisa assinar na hora da criação, mas o sistema avisa
+             // Para simplificar, exigiremos ambas se o usuário tiver permissão, ou deixaremos pendente.
+             // Vamos permitir salvar como completed mas avisar.
+             const confirm = window.confirm("A assinatura do Engenheiro Gerente ainda não foi feita. Deseja concluir mesmo assim?");
+             if(!confirm) return;
+        }
     }
     
-    // Pass data to parent instead of saving directly
     const finalData = { ...reportData, date: new Date().toISOString().split('T')[0] };
     onSave(finalData, status);
   };
@@ -187,6 +208,9 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, onSave
 
   const activeCategory = CHECKLIST_DEFINITIONS.find(c => c.id === activeCategoryId);
   
+  const canSignInspector = !isReadOnly && (userProfile.role === 'assistant' || userProfile.role === 'admin');
+  const canSignManager = !isReadOnly && (userProfile.role === 'manager' || userProfile.role === 'admin');
+
   return (
     <div className="bg-white pb-32">
         <div className="p-4 sm:p-6 min-h-[calc(100vh-200px)]">
@@ -215,15 +239,43 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, onSave
             {activeCategoryId === 'signatures' && (
                 <div id="signatures" className="animate-fade-in">
                     <h3 className="text-xl font-semibold text-gray-700 mb-4 bg-gray-100 p-3 rounded-lg">Assinaturas</h3>
-                    <p className="text-sm text-gray-500 my-4">As assinaturas são necessárias para marcar o relatório como "Concluído". Para esta demonstração, digite seu nome. Uma aplicação real se integraria a um serviço como gov.br.</p>
+                    <p className="text-sm text-gray-500 my-4">Confirme sua identidade clicando no botão de assinatura abaixo.</p>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Responsável Ambiental</label>
-                            <input type="text" value={reportData.signatures.inspector} disabled={isReadOnly} onChange={e => setReportData({...reportData, signatures: {...reportData.signatures, inspector: e.target.value}})} placeholder="Digite o nome para assinar" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100"/>
+                        <div className={`p-4 rounded-lg border-2 ${reportData.signatures.inspector ? 'border-green-500 bg-green-50' : 'border-dashed border-gray-300'}`}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Responsável Ambiental</label>
+                            {reportData.signatures.inspector ? (
+                                <div>
+                                    <p className="text-lg font-bold text-green-800">{reportData.signatures.inspector}</p>
+                                    <p className="text-xs text-green-600">{reportData.signatures.inspectorDate}</p>
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={() => handleSignature('inspector')}
+                                    disabled={!canSignInspector}
+                                    className="w-full py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                >
+                                    {canSignInspector ? 'Assinar Digitalmente' : 'Aguardando Assinatura'}
+                                </button>
+                            )}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Responsável Engenharia</label>
-                            <input type="text" value={reportData.signatures.manager} disabled={isReadOnly} onChange={e => setReportData({...reportData, signatures: {...reportData.signatures, manager: e.target.value}})} placeholder="Digite o nome para assinar" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100"/>
+
+                        <div className={`p-4 rounded-lg border-2 ${reportData.signatures.manager ? 'border-green-500 bg-green-50' : 'border-dashed border-gray-300'}`}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Responsável Engenharia</label>
+                             {reportData.signatures.manager ? (
+                                <div>
+                                    <p className="text-lg font-bold text-green-800">{reportData.signatures.manager}</p>
+                                    <p className="text-xs text-green-600">{reportData.signatures.managerDate}</p>
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={() => handleSignature('manager')}
+                                    disabled={!canSignManager}
+                                    className="w-full py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                >
+                                    {canSignManager ? 'Assinar Digitalmente' : 'Aguardando Engenharia'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

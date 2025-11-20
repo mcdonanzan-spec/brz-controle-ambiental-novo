@@ -1,3 +1,4 @@
+
 import { Project, Report, InspectionItemResult, InspectionStatus, ChecklistCategory } from '../types';
 import { MOCK_PROJECTS, CHECKLIST_DEFINITIONS } from '../constants';
 
@@ -111,6 +112,7 @@ export const getNewReportTemplate = (projectId: string): Omit<Report, 'id' | 'sc
     projectId,
     date: new Date().toISOString().split('T')[0],
     inspector: 'Gediel da Silva', // Mock user
+    inspectorId: 'mock-user-1', // Mock ID
     status: 'Draft',
     results,
     signatures: {

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Project, Report, InspectionStatus, UserRole } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { ArrowLeftIcon, PlusIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon } from './icons';
+import { ArrowLeftIcon, PlusIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon, ConcreteMixerIcon, WastePipeIcon, HardHatIcon, OilBarrelIcon, GasPumpIcon } from './icons';
 
 interface ProjectDashboardProps {
   project: Project;
@@ -15,11 +15,11 @@ interface ProjectDashboardProps {
 }
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
-    massa: CubeTransparentIcon,
-    efluentes: FunnelIcon,
-    campo: WrenchScrewdriverIcon,
-    quimicos: BeakerIcon,
-    combustivel: FireIcon,
+    massa: ConcreteMixerIcon,
+    efluentes: WastePipeIcon,
+    campo: HardHatIcon,
+    quimicos: OilBarrelIcon,
+    combustivel: GasPumpIcon,
     signatures: DocumentCheckIcon
 };
 
@@ -138,9 +138,10 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
                         return (
                             <div key={category.id} onClick={() => onEditReportCategory(latestReport, category.id)} className="bg-white p-5 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        {Icon && <Icon className="h-8 w-8 text-gray-400 mb-2"/>}
-                                        <h3 className="font-bold text-gray-800 text-lg">{category.title}</h3>
+                                    <div className="flex-1 pr-2">
+                                        {Icon && <Icon className="h-10 w-10 text-gray-500 mb-3"/>}
+                                        {/* Adicionado leading-tight para melhorar quebra de linha em titulos grandes como Efluentes */}
+                                        <h3 className="font-bold text-gray-800 text-lg leading-tight">{category.title}</h3>
                                     </div>
                                     <ScoreRing score={score} />
                                 </div>

@@ -148,11 +148,257 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   // Diretor e Viewer nunca editam, independente do status.
   const isReadOnly = useMemo(() => {
       if (userProfile.role === 'director' || userProfile.role === 'viewer') return true;
-      return existingReport?.status === 'Completed';
+      return existingReport?.status === 'Completed' && userProfile.role !== 'manager'; 
   }, [existingReport, userProfile.role]);
   
   const handleResultChange = (itemId: string, newResult: Partial<InspectionItemResult>) => {
     if (isReadOnly) return;
     setReportData(prev => ({
       ...prev,
-      results: prev.results.map(res => (res.itemId === itemId ? { ...res
+      results: prev.results.map(res => (res.itemId === itemId ? { ...res, ...newResult } : res)),
+    }));
+  };
+
+  const handleSave = (status: 'Draft' | 'Completed') => {
+      if (status === 'Completed') {
+          if (userProfile.role === 'manager') {
+               setSigningRole('manager');
+               setShowGovLogin(true);
+          } else {
+               setSigningRole('inspector');
+               setShowGovLogin(true);
+          }
+      } else {
+          onSave(reportData, 'Draft');
+      }
+  }
+
+  const handleGovLoginConfirm = () => {
+      const dateStr = new Date().toLocaleString('pt-BR');
+      const updatedReport = { ...reportData };
+      
+      if (signingRole === 'inspector') {
+          updatedReport.signatures.inspector = userProfile.full_name;
+          updatedReport.signatures.inspectorDate = dateStr;
+      } else if (signingRole === 'manager') {
+          updatedReport.signatures.manager = userProfile.full_name;
+          updatedReport.signatures.managerDate = dateStr;
+      }
+
+      setReportData(updatedReport);
+      setShowGovLogin(false);
+      onSave(updatedReport, 'Completed');
+  }
+
+  const activeCategory = CHECKLIST_DEFINITIONS.find(c => c.id === activeCategoryId);
+
+  const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
+    massa: CubeTransparentIcon,
+    efluentes: FunnelIcon,
+    campo: WrenchScrewdriverIcon,
+    quimicos: BeakerIcon,
+    combustivel: FireIcon,
+    signatures: DocumentCheckIcon
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-xl flex flex-col h-[calc(100vh-140px)]">
+      <GovBrAuthModal isOpen={showGovLogin} onClose={() => setShowGovLogin(false)} onConfirm={handleGovLoginConfirm} />
+      
+      {/* Header fixo */}
+      <div className="p-4 border-b flex justify-between items-center flex-shrink-0 bg-white rounded-t-lg z-10">
+        <div>
+            <h2 className="text-xl font-bold text-gray-800">Nova Inspeção: {project.name}</h2>
+            <p className="text-sm text-gray-500">Inspetor: {reportData.inspector}</p>
+        </div>
+        <div className="space-x-3">
+             <button onClick={onCancel} className="text-gray-600 hover:text-gray-800 font-medium px-3 py-2">Cancelar</button>
+             <button onClick={() => handleSave('Draft')} className="bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium transition-colors" disabled={isReadOnly}>
+                Salvar Rascunho
+             </button>
+             <button onClick={() => handleSave('Completed')} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center" disabled={isReadOnly}>
+                <CheckIcon className="h-5 w-5 mr-1"/>
+                Finalizar
+             </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar Navegação */}
+        <div className="w-64 bg-gray-50 border-r overflow-y-auto hidden md:block">
+            <nav className="p-4 space-y-2">
+                {CHECKLIST_DEFINITIONS.map(cat => {
+                    const Icon = categoryIcons[cat.id] || CubeTransparentIcon;
+                    const isActive = activeCategoryId === cat.id;
+                    
+                    // Contagem de pendências (itens sem resposta)
+                    const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
+                    const filledCount = reportData.results.filter(r => catItemIds.includes(r.itemId) && r.status !== null).length;
+                    const totalCount = catItemIds.length;
+                    const isComplete = filledCount === totalCount;
+
+                    return (
+                        <button
+                            key={cat.id}
+                            onClick={() => setActiveCategoryId(cat.id)}
+                            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isActive ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                        >
+                            <div className="flex items-center">
+                                <Icon className={`h-5 w-5 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                                <span className="text-sm font-medium">{cat.title.split(' ')[0]}...</span>
+                            </div>
+                            {isComplete ? (
+                                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                            ) : (
+                                <span className="text-xs text-gray-400">{filledCount}/{totalCount}</span>
+                            )}
+                        </button>
+                    )
+                })}
+            </nav>
+        </div>
+
+        {/* Mobile Tabs */}
+        <div className="md:hidden overflow-x-auto flex border-b bg-gray-50 flex-shrink-0">
+             {CHECKLIST_DEFINITIONS.map(cat => {
+                 const Icon = categoryIcons[cat.id] || CubeTransparentIcon;
+                 const isActive = activeCategoryId === cat.id;
+                 return (
+                    <button
+                        key={cat.id}
+                        onClick={() => setActiveCategoryId(cat.id)}
+                        className={`flex-shrink-0 p-4 flex flex-col items-center min-w-[80px] ${isActive ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' : 'text-gray-500'}`}
+                    >
+                        <Icon className="h-6 w-6 mb-1" />
+                        <span className="text-[10px] font-bold text-center leading-tight">{cat.title.slice(0, 8)}..</span>
+                    </button>
+                 )
+             })}
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+            {activeCategory && (
+                <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
+                    <div className="flex items-center space-x-3 mb-6 border-b pb-4">
+                         {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-8 w-8 text-blue-600" })}
+                         <h2 className="text-2xl font-bold text-gray-800">{activeCategory.title}</h2>
+                    </div>
+
+                    {activeCategory.subCategories.map(subCat => (
+                        <div key={subCat.title} className="bg-white border rounded-lg overflow-hidden">
+                            <div className="bg-gray-100 px-4 py-2 border-b">
+                                <h3 className="font-semibold text-gray-700">{subCat.title}</h3>
+                            </div>
+                            <div className="divide-y">
+                                {subCat.items.map(item => {
+                                    const result = reportData.results.find(r => r.itemId === item.id);
+                                    if (!result) return null;
+
+                                    return (
+                                        <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <p className="text-gray-800 text-sm mb-2">{item.text}</p>
+                                                    {result.previousNc && (
+                                                        <div className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
+                                                            <ExclamationTriangleIcon className="h-3 w-3 mr-1"/>
+                                                            Reincidência (NC Anterior)
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Status Selector */}
+                                                <div className="flex bg-gray-200 rounded-lg p-1 self-start flex-shrink-0">
+                                                    {[
+                                                        { value: InspectionStatus.C, label: 'C', color: 'bg-green-500 text-white', fullLabel: 'Conforme' },
+                                                        { value: InspectionStatus.NC, label: 'NC', color: 'bg-red-500 text-white', fullLabel: 'Não Conforme' },
+                                                        { value: InspectionStatus.NA, label: 'NA', color: 'bg-gray-500 text-white', fullLabel: 'Não Aplicável' },
+                                                    ].map(opt => (
+                                                        <button
+                                                            key={opt.value}
+                                                            onClick={() => handleResultChange(item.id, { status: opt.value as InspectionStatus })}
+                                                            disabled={isReadOnly}
+                                                            className={`w-10 h-8 flex items-center justify-center text-xs font-bold rounded-md transition-all ${result.status === opt.value ? opt.color + ' shadow-md' : 'text-gray-500 hover:bg-gray-300'}`}
+                                                            title={opt.fullLabel}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Conditional Fields */}
+                                            <div className="mt-3 space-y-3">
+                                                {/* Photos */}
+                                                <PhotoUploader 
+                                                    photos={result.photos} 
+                                                    onAddPhoto={(p) => handleResultChange(item.id, { photos: [...result.photos, p] })}
+                                                    onRemovePhoto={(pid) => handleResultChange(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
+                                                    disabled={isReadOnly}
+                                                />
+                                                
+                                                {/* Comment */}
+                                                <textarea
+                                                    placeholder="Observações..."
+                                                    value={result.comment}
+                                                    onChange={e => handleResultChange(item.id, { comment: e.target.value })}
+                                                    disabled={isReadOnly}
+                                                    className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                                    rows={2}
+                                                />
+
+                                                {/* Action Plan (Only if NC) */}
+                                                {result.status === InspectionStatus.NC && (
+                                                    <div className="bg-red-50 p-3 rounded-md border border-red-100 mt-2 animate-fade-in">
+                                                        <h4 className="text-xs font-bold text-red-700 uppercase mb-2">Plano de Ação Obrigatório</h4>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <div className="md:col-span-2">
+                                                                <label className="block text-xs font-medium text-gray-700">O que será feito?</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={result.actionPlan?.actions || ''}
+                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
+                                                                    disabled={isReadOnly}
+                                                                    className="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700">Responsável</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={result.actionPlan?.responsible || ''}
+                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
+                                                                    disabled={isReadOnly}
+                                                                    className="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700">Prazo</label>
+                                                                <input 
+                                                                    type="date" 
+                                                                    value={result.actionPlan?.deadline || ''}
+                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
+                                                                    disabled={isReadOnly}
+                                                                    className="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ReportForm;

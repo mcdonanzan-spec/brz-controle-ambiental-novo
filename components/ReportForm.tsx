@@ -33,11 +33,11 @@ const PhotoUploader: React.FC<{ photos: Photo[], onAddPhoto: (photo: Photo) => v
   };
 
   return (
-    <div className="mt-2 flex items-center gap-2 flex-wrap">
+    <div className="mt-2 flex items-center gap-3 flex-wrap">
       {photos.map(photo => (
         <div key={photo.id} className="relative group">
-          <img src={photo.dataUrl} alt="inspection" className="h-20 w-20 rounded-md object-cover" />
-          <button disabled={disabled} onClick={() => onRemovePhoto(photo.id)} className={`absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 transform translate-x-1/2 -translate-y-1/2 ${disabled ? 'hidden' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+          <img src={photo.dataUrl} alt="inspection" className="h-20 w-20 rounded-lg object-cover shadow-sm" />
+          <button disabled={disabled} onClick={() => onRemovePhoto(photo.id)} className={`absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 shadow-md ${disabled ? 'hidden' : 'opacity-100'} transition-opacity`}>
             <XMarkIcon className="h-3 w-3" />
           </button>
         </div>
@@ -47,10 +47,10 @@ const PhotoUploader: React.FC<{ photos: Photo[], onAddPhoto: (photo: Photo) => v
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={disabled}
-        className="h-20 w-20 bg-gray-100 border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center justify-center text-gray-500 hover:bg-gray-200 hover:border-gray-400 transition disabled:bg-gray-200 disabled:cursor-not-allowed"
+        className="h-20 w-20 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-blue-400 hover:text-blue-500 transition disabled:bg-gray-200 disabled:cursor-not-allowed"
       >
         <CameraIcon className="h-8 w-8" />
-        <span className="text-xs mt-1">Adicionar</span>
+        <span className="text-[10px] font-bold uppercase mt-1">Foto</span>
       </button>
     </div>
   );
@@ -161,7 +161,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
 
   const handleSave = (status: 'Draft' | 'Completed') => {
       if (status === 'Completed') {
-          // Validação: Verificar se todos os itens foram respondidos
           const categoryItemIds = CHECKLIST_DEFINITIONS.flatMap(cat => cat.subCategories.flatMap(sc => sc.items.map(i => i.id)));
           const unansweredItem = categoryItemIds.find(itemId => {
               const result = reportData.results.find(r => r.itemId === itemId);
@@ -174,7 +173,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
               return;
           }
 
-          // Validação: Verificar se NC tem plano de ação
           const invalidNC = reportData.results.find(r => r.status === InspectionStatus.NC && (!r.actionPlan?.actions));
           if (invalidNC) {
               const itemDef = CHECKLIST_DEFINITIONS.flatMap(c => c.subCategories.flatMap(sc => sc.items)).find(i => i.id === invalidNC.itemId);
@@ -223,30 +221,67 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-xl flex flex-col h-[calc(100vh-140px)]">
+    <div className="bg-white md:rounded-lg shadow-xl flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-140px)] w-full max-w-6xl mx-auto">
       <GovBrAuthModal isOpen={showGovLogin} onClose={() => setShowGovLogin(false)} onConfirm={handleGovLoginConfirm} />
       
-      {/* Header fixo */}
-      <div className="p-4 border-b flex justify-between items-center flex-shrink-0 bg-white rounded-t-lg z-10">
+      {/* Header */}
+      <div className="p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center flex-shrink-0 bg-white md:rounded-t-lg z-10 gap-3">
         <div>
-            <h2 className="text-xl font-bold text-gray-800">Nova Inspeção: {project.name}</h2>
-            <p className="text-sm text-gray-500">Inspetor: {reportData.inspector}</p>
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 leading-tight">Inspeção: {project.name}</h2>
+            <p className="text-xs text-gray-500">{reportData.inspector}</p>
         </div>
-        <div className="space-x-3">
-             <button onClick={onCancel} className="text-gray-600 hover:text-gray-800 font-medium px-3 py-2">Cancelar</button>
-             <button onClick={() => handleSave('Draft')} className="bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium transition-colors" disabled={isReadOnly}>
-                Salvar Rascunho
+        <div className="flex space-x-2 w-full sm:w-auto">
+             <button onClick={onCancel} className="flex-1 sm:flex-none text-gray-600 hover:bg-gray-100 border border-gray-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                Cancelar
              </button>
-             <button onClick={() => handleSave('Completed')} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center" disabled={isReadOnly}>
-                <CheckIcon className="h-5 w-5 mr-1"/>
+             <button onClick={() => handleSave('Draft')} className="flex-1 sm:flex-none bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition-colors" disabled={isReadOnly}>
+                Salvar
+             </button>
+             <button onClick={() => handleSave('Completed')} className="flex-1 sm:flex-none bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-lg text-sm font-medium shadow-md transition-colors flex items-center justify-center" disabled={isReadOnly}>
+                <CheckIcon className="h-4 w-4 mr-1"/>
                 Finalizar
              </button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navegação */}
-        <div className="w-64 bg-gray-50 border-r overflow-y-auto hidden md:block">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        
+        {/* Mobile Tabs (Category Icons) - Top Scroll */}
+        <div className="md:hidden overflow-x-auto flex border-b bg-white flex-shrink-0 no-scrollbar">
+             {CHECKLIST_DEFINITIONS.map(cat => {
+                 const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
+                 const isActive = activeCategoryId === cat.id;
+                 const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
+                 const filledCount = reportData.results.filter(r => catItemIds.includes(r.itemId) && r.status !== null).length;
+                 const totalCount = catItemIds.length;
+                 
+                 return (
+                    <button
+                        key={cat.id}
+                        onClick={() => setActiveCategoryId(cat.id)}
+                        className={`flex-shrink-0 py-3 px-4 flex flex-col items-center min-w-[80px] relative ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                    >
+                        <div className={`p-2 rounded-full mb-1 ${isActive ? 'bg-blue-50' : ''}`}>
+                            <Icon className="h-6 w-6" />
+                        </div>
+                        <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{cat.title.split(' ')[0]}</span>
+                        
+                        {/* Progress dot */}
+                        <div className="mt-1 h-1 w-8 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                                className={`h-full rounded-full ${filledCount === totalCount ? 'bg-green-500' : 'bg-blue-500'}`} 
+                                style={{ width: `${(filledCount / totalCount) * 100}%` }}
+                            ></div>
+                        </div>
+                        
+                        {isActive && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+                    </button>
+                 )
+             })}
+        </div>
+
+        {/* Sidebar Navigation (Desktop) */}
+        <div className="w-72 bg-gray-50 border-r overflow-y-auto hidden md:block custom-scrollbar">
             <nav className="p-4 space-y-2">
                 {CHECKLIST_DEFINITIONS.map(cat => {
                     const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
@@ -261,16 +296,22 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                         <button
                             key={cat.id}
                             onClick={() => setActiveCategoryId(cat.id)}
-                            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isActive ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${
+                                isActive 
+                                ? 'bg-white text-blue-700 shadow-md border border-blue-100' 
+                                : 'text-gray-600 hover:bg-gray-200'
+                            }`}
                         >
                             <div className="flex items-center">
-                                <Icon className={`h-6 w-6 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                                <span className="text-sm font-medium text-left">{cat.title.split(' ')[0]}...</span>
+                                <div className={`p-2 rounded-lg mr-3 ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
+                                    <Icon className="h-5 w-5" />
+                                </div>
+                                <span className="text-sm font-bold text-left">{cat.title}</span>
                             </div>
                             {isComplete ? (
-                                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                <CheckIcon className="h-5 w-5 text-green-500" />
                             ) : (
-                                <span className="text-xs text-gray-400">{filledCount}/{totalCount}</span>
+                                <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{filledCount}/{totalCount}</span>
                             )}
                         </button>
                     )
@@ -278,173 +319,135 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
             </nav>
         </div>
 
-        {/* Mobile Tabs */}
-        <div className="md:hidden overflow-x-auto flex border-b bg-gray-50 flex-shrink-0">
-             {CHECKLIST_DEFINITIONS.map(cat => {
-                 const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
-                 const isActive = activeCategoryId === cat.id;
-                 return (
-                    <button
-                        key={cat.id}
-                        onClick={() => setActiveCategoryId(cat.id)}
-                        className={`flex-shrink-0 p-4 flex flex-col items-center min-w-[80px] ${isActive ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' : 'text-gray-500'}`}
-                    >
-                        <Icon className="h-6 w-6 mb-1" />
-                        <span className="text-[10px] font-bold text-center leading-tight">{cat.title.slice(0, 8)}..</span>
-                    </button>
-                 )
-             })}
-        </div>
-
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="flex-1 overflow-y-auto bg-gray-50 md:bg-white">
             {activeCategory && (
-                <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
-                    <div className="flex items-center space-x-3 mb-6 border-b pb-4">
-                         {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-10 w-10 text-blue-600" })}
+                <div className="max-w-3xl mx-auto p-4 md:p-8 pb-24 animate-fade-in">
+                    {/* Desktop Header for Category */}
+                    <div className="hidden md:flex items-center space-x-4 mb-8 border-b pb-4">
+                         <div className="p-3 bg-blue-50 rounded-xl">
+                            {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-8 w-8 text-blue-600" })}
+                         </div>
                          <h2 className="text-2xl font-bold text-gray-800">{activeCategory.title}</h2>
                     </div>
 
-                    {activeCategory.subCategories.map(subCat => (
-                        <div key={subCat.title} className="bg-white border rounded-lg overflow-hidden shadow-sm">
-                            <div className="bg-gray-100 px-4 py-2 border-b">
-                                <h3 className="font-semibold text-gray-700">{subCat.title}</h3>
-                            </div>
-                            <div className="divide-y">
+                    <div className="space-y-6">
+                        {activeCategory.subCategories.map(subCat => (
+                            <div key={subCat.title} className="space-y-4">
+                                <div className="flex items-center space-x-2 text-blue-800 bg-blue-50 px-3 py-2 rounded-lg">
+                                    <span className="font-bold text-sm uppercase tracking-wide">{subCat.title}</span>
+                                </div>
+                                
                                 {subCat.items.map(item => {
                                     const result = reportData.results.find(r => r.itemId === item.id);
                                     if (!result) return null;
 
                                     return (
-                                        <div key={item.id} className="p-5 hover:bg-gray-50 transition-colors">
-                                            {/* Question Text & Previous Warning */}
-                                            <div className="mb-4">
-                                                <p className="text-gray-800 text-base font-medium mb-2">{item.text}</p>
+                                        <div key={item.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                                            {/* Question */}
+                                            <div className="mb-5">
                                                 {result.previousNc && (
-                                                    <div className="inline-flex items-center px-3 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200 animate-pulse">
-                                                        <ExclamationTriangleIcon className="h-4 w-4 mr-1"/>
-                                                        PENDÊNCIA DO RELATÓRIO ANTERIOR
+                                                    <div className="inline-flex items-center px-2 py-0.5 mb-2 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                                                        <ExclamationTriangleIcon className="h-3 w-3 mr-1"/> REINCIDÊNCIA
                                                     </div>
                                                 )}
+                                                <p className="text-gray-800 font-medium leading-snug">{item.text}</p>
                                             </div>
 
-                                            {/* Botões de Ação - Layout App Classic (Blocos com Ícones) */}
-                                            <div className="grid grid-cols-3 gap-4 mb-4">
+                                            {/* Answer Buttons - ICON ONLY - ORIGINAL APP STYLE */}
+                                            <div className="flex justify-center gap-6 mb-5">
+                                                {/* Conforme */}
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.C })}
                                                     disabled={isReadOnly}
-                                                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                                                    className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm ${
                                                         result.status === InspectionStatus.C 
-                                                        ? 'bg-green-50 border-green-500' 
-                                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                        ? 'bg-green-500 text-white shadow-green-200 ring-2 ring-green-500 ring-offset-2' 
+                                                        : 'bg-gray-50 text-gray-400 hover:bg-green-50 hover:text-green-500 border border-gray-200'
                                                     }`}
                                                 >
-                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
-                                                        result.status === InspectionStatus.C ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
-                                                    }`}>
-                                                        <CheckIcon className="h-6 w-6" />
-                                                    </div>
-                                                    <span className={`text-xs font-bold uppercase ${result.status === InspectionStatus.C ? 'text-green-700' : 'text-gray-500'}`}>
-                                                        Conforme
-                                                    </span>
+                                                    <CheckIcon className="h-10 w-10" />
                                                 </button>
 
+                                                {/* Não Conforme */}
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NC })}
                                                     disabled={isReadOnly}
-                                                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                                                    className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm ${
                                                         result.status === InspectionStatus.NC 
-                                                        ? 'bg-red-50 border-red-500' 
-                                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                        ? 'bg-red-500 text-white shadow-red-200 ring-2 ring-red-500 ring-offset-2' 
+                                                        : 'bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 border border-gray-200'
                                                     }`}
                                                 >
-                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
-                                                        result.status === InspectionStatus.NC ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-400'
-                                                    }`}>
-                                                        <XMarkIcon className="h-6 w-6" />
-                                                    </div>
-                                                    <span className={`text-xs font-bold uppercase ${result.status === InspectionStatus.NC ? 'text-red-700' : 'text-gray-500'}`}>
-                                                        Não Conforme
-                                                    </span>
+                                                    <XMarkIcon className="h-10 w-10" />
                                                 </button>
 
+                                                {/* N/A */}
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NA })}
                                                     disabled={isReadOnly}
-                                                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                                                    className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all transform active:scale-95 shadow-sm ${
                                                         result.status === InspectionStatus.NA 
-                                                        ? 'bg-gray-50 border-gray-500' 
-                                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                        ? 'bg-gray-600 text-white shadow-gray-300 ring-2 ring-gray-600 ring-offset-2' 
+                                                        : 'bg-gray-50 text-gray-400 hover:bg-gray-200 hover:text-gray-600 border border-gray-200'
                                                     }`}
                                                 >
-                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
-                                                        result.status === InspectionStatus.NA ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-400'
-                                                    }`}>
-                                                        <MinusIcon className="h-6 w-6" />
-                                                    </div>
-                                                    <span className={`text-xs font-bold uppercase ${result.status === InspectionStatus.NA ? 'text-gray-700' : 'text-gray-500'}`}>
-                                                        N/A
-                                                    </span>
+                                                    <MinusIcon className="h-10 w-10" />
                                                 </button>
                                             </div>
 
-                                            {/* Campos Condicionais (Fotos, Comentários, Plano de Ação) */}
-                                            <div className="mt-3 space-y-3 pl-1">
-                                                {/* Photos */}
-                                                <PhotoUploader 
-                                                    photos={result.photos} 
-                                                    onAddPhoto={(p) => handleResultChange(item.id, { photos: [...result.photos, p] })}
-                                                    onRemovePhoto={(pid) => handleResultChange(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
-                                                    disabled={isReadOnly}
-                                                />
+                                            {/* Extended Actions */}
+                                            <div className="border-t pt-4">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    {/* Photo Prompt */}
+                                                    <PhotoUploader 
+                                                        photos={result.photos} 
+                                                        onAddPhoto={(p) => handleResultChange(item.id, { photos: [...result.photos, p] })}
+                                                        onRemovePhoto={(pid) => handleResultChange(item.id, { photos: result.photos.filter(p => p.id !== pid) })}
+                                                        disabled={isReadOnly}
+                                                    />
+                                                </div>
                                                 
-                                                {/* Comment */}
                                                 <textarea
-                                                    placeholder="Observações adicionais..."
+                                                    placeholder="Adicionar observação..."
                                                     value={result.comment}
                                                     onChange={e => handleResultChange(item.id, { comment: e.target.value })}
                                                     disabled={isReadOnly}
-                                                    className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-gray-50 focus:bg-white transition-colors"
-                                                    rows={2}
+                                                    className="w-full text-sm p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    rows={1}
+                                                    style={{ minHeight: '2.5rem' }}
                                                 />
 
-                                                {/* Action Plan (Only if NC) */}
+                                                {/* Action Plan Section */}
                                                 {result.status === InspectionStatus.NC && (
-                                                    <div className="bg-red-50 p-4 rounded-lg border border-red-200 mt-4 animate-fade-in shadow-sm">
-                                                        <div className="flex items-center mb-3 text-red-700">
-                                                            <ExclamationTriangleIcon className="h-5 w-5 mr-2"/>
-                                                            <h4 className="text-sm font-bold uppercase">Plano de Ação Obrigatório</h4>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <div className="md:col-span-2">
-                                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">O que será feito?</label>
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={result.actionPlan?.actions || ''}
-                                                                    onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
-                                                                    disabled={isReadOnly}
-                                                                    placeholder="Descreva a ação corretiva..."
-                                                                    className="w-full p-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Responsável</label>
+                                                    <div className="mt-4 bg-red-50 p-4 rounded-xl border border-red-100 animate-fade-in">
+                                                        <h4 className="text-xs font-bold text-red-700 uppercase mb-3 flex items-center">
+                                                            <ExclamationTriangleIcon className="h-4 w-4 mr-1"/> Plano de Ação
+                                                        </h4>
+                                                        <div className="space-y-3">
+                                                            <input 
+                                                                type="text" 
+                                                                value={result.actionPlan?.actions || ''}
+                                                                onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, actions: e.target.value } })}
+                                                                disabled={isReadOnly}
+                                                                placeholder="O que será feito?"
+                                                                className="w-full p-2 text-sm border border-red-200 rounded-lg focus:border-red-500 focus:ring-red-500"
+                                                            />
+                                                            <div className="flex gap-3">
                                                                 <input 
                                                                     type="text" 
                                                                     value={result.actionPlan?.responsible || ''}
                                                                     onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, responsible: e.target.value } })}
                                                                     disabled={isReadOnly}
-                                                                    className="w-full p-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
+                                                                    placeholder="Responsável"
+                                                                    className="w-1/2 p-2 text-sm border border-red-200 rounded-lg focus:border-red-500 focus:ring-red-500"
                                                                 />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Prazo Limite</label>
                                                                 <input 
                                                                     type="date" 
                                                                     value={result.actionPlan?.deadline || ''}
                                                                     onChange={e => handleResultChange(item.id, { actionPlan: { ...result.actionPlan!, deadline: e.target.value } })}
                                                                     disabled={isReadOnly}
-                                                                    className="w-full p-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
+                                                                    className="w-1/2 p-2 text-sm border border-red-200 rounded-lg focus:border-red-500 focus:ring-red-500"
                                                                 />
                                                             </div>
                                                         </div>
@@ -455,8 +458,8 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                                     )
                                 })}
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
         </div>

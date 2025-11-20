@@ -62,7 +62,11 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   );
   const [activeCategoryId, setActiveCategoryId] = useState<string>(initialCategoryId || CHECKLIST_DEFINITIONS[0].id);
 
-  const isReadOnly = useMemo(() => existingReport?.status === 'Completed', [existingReport]);
+  // Diretor e Viewer nunca editam, independente do status.
+  const isReadOnly = useMemo(() => {
+      if (userProfile.role === 'director' || userProfile.role === 'viewer') return true;
+      return existingReport?.status === 'Completed';
+  }, [existingReport, userProfile.role]);
   
   const handleResultChange = (itemId: string, newResult: Partial<InspectionItemResult>) => {
     if (isReadOnly) return;
@@ -114,9 +118,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
             return;
         }
         if (!reportData.signatures.manager) {
-             // Regra de negócio: O gerente não precisa assinar na hora da criação, mas o sistema avisa
-             // Para simplificar, exigiremos ambas se o usuário tiver permissão, ou deixaremos pendente.
-             // Vamos permitir salvar como completed mas avisar.
              const confirm = window.confirm("A assinatura do Engenheiro Gerente ainda não foi feita. Deseja concluir mesmo assim?");
              if(!confirm) return;
         }
@@ -208,6 +209,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
 
   const activeCategory = CHECKLIST_DEFINITIONS.find(c => c.id === activeCategoryId);
   
+  // Regras de Assinatura
   const canSignInspector = !isReadOnly && (userProfile.role === 'assistant' || userProfile.role === 'admin');
   const canSignManager = !isReadOnly && (userProfile.role === 'manager' || userProfile.role === 'admin');
 
@@ -218,7 +220,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
             {isReadOnly && (
               <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
                 <p className="font-bold">Modo de Leitura</p>
-                <p>Este relatório foi concluído e não pode ser alterado.</p>
+                <p>Você está visualizando este relatório como {userProfile.role === 'director' ? 'Diretoria' : 'Visitante'} ou o relatório já foi concluído.</p>
               </div>
             )}
             
@@ -298,17 +300,19 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
         </button>
       </div>
       
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-100 p-3 flex flex-col sm:flex-row justify-end items-center gap-3 border-t-2 z-[51] h-auto sm:h-16">
-        <button onClick={onCancel} className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 font-semibold">Cancelar</button>
-        <button onClick={() => handleSubmit('Draft')} disabled={isReadOnly} className="w-full sm:w-auto flex justify-center items-center px-4 py-2 text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 font-semibold disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
-            <PaperAirplaneIcon className="h-5 w-5 mr-2"/>
-            Salvar Rascunho
-        </button>
-        <button onClick={() => handleSubmit('Completed')} disabled={isReadOnly} className="w-full sm:w-auto flex justify-center items-center px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed">
-            <CheckIcon className="h-5 w-5 mr-2"/>
-            Concluir e Enviar
-        </button>
-      </div>
+      {!isReadOnly && (
+          <div className="fixed bottom-0 left-0 right-0 bg-gray-100 p-3 flex flex-col sm:flex-row justify-end items-center gap-3 border-t-2 z-[51] h-auto sm:h-16">
+            <button onClick={onCancel} className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 font-semibold">Cancelar</button>
+            <button onClick={() => handleSubmit('Draft')} className="w-full sm:w-auto flex justify-center items-center px-4 py-2 text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 font-semibold disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
+                <PaperAirplaneIcon className="h-5 w-5 mr-2"/>
+                Salvar Rascunho
+            </button>
+            <button onClick={() => handleSubmit('Completed')} className="w-full sm:w-auto flex justify-center items-center px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed">
+                <CheckIcon className="h-5 w-5 mr-2"/>
+                Concluir e Enviar
+            </button>
+          </div>
+      )}
     </div>
   );
 };

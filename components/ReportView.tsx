@@ -36,9 +36,17 @@ const ReportView: React.FC<ReportViewProps> = ({ report, project, onBack, onEdit
     }
   };
   
-  // Managers can edit completed reports ONLY to add their signature if missing
-  // Otherwise only edit drafts
-  const canEdit = report.status === 'Draft' || (userRole === 'manager' && !report.signatures.manager);
+  // Edição permitida se:
+  // 1. Status for Rascunho (E usuário não é Diretor/Viewer)
+  // 2. Gerente assinando um relatório concluído sem assinatura dele
+  // 3. Admin (superusuário)
+  const canEdit = 
+    (userRole !== 'director' && userRole !== 'viewer') && 
+    (
+        report.status === 'Draft' || 
+        (userRole === 'manager' && !report.signatures.manager) ||
+        userRole === 'admin'
+    );
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto">

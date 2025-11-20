@@ -66,13 +66,15 @@ const App: React.FC = () => {
   // Filters
   const getAuthorizedProjects = () => {
       if (!userProfile) return [];
-      if (userProfile.role === 'admin') return projects;
+      // Admin (Master) e Director (Visualização) veem todas as obras
+      if (userProfile.role === 'admin' || userProfile.role === 'director') return projects;
       return projects.filter(p => userProfile.assigned_project_ids?.includes(p.id));
   }
 
   const getAuthorizedReports = () => {
       if (!userProfile) return [];
-      const authorizedProjectIds = userProfile.role === 'admin' 
+      // Admin e Director veem todos os relatórios
+      const authorizedProjectIds = (userProfile.role === 'admin' || userProfile.role === 'director')
         ? projects.map(p => p.id) 
         : userProfile.assigned_project_ids || [];
         
@@ -167,6 +169,14 @@ const App: React.FC = () => {
     else if (view === 'PROJECT_DASHBOARD' && selectedProject) title = selectedProject.name;
     else if (view === 'REPORT_FORM' || view === 'REPORT_VIEW') title = 'Relatório de Inspeção';
     
+    let roleLabel = 'Visitante';
+    switch(userProfile.role) {
+        case 'admin': roleLabel = 'Administrador'; break;
+        case 'director': roleLabel = 'Diretoria'; break;
+        case 'manager': roleLabel = 'Engenheiro'; break;
+        case 'assistant': roleLabel = 'Assistente'; break;
+    }
+
     return (
     <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-40">
       <div className="flex items-center space-x-4 cursor-pointer" onClick={() => setView('SITES_LIST')}>
@@ -180,7 +190,7 @@ const App: React.FC = () => {
       <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-gray-800">{userProfile.full_name}</p>
-              <p className="text-xs text-gray-500 capitalize">{userProfile.role === 'admin' ? 'Diretoria' : userProfile.role === 'manager' ? 'Engenheiro' : 'Assistente'}</p>
+              <p className="text-xs text-gray-500 capitalize">{roleLabel}</p>
           </div>
           <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-800 font-medium border border-red-200 rounded px-2 py-1">Sair</button>
       </div>
@@ -193,7 +203,7 @@ const App: React.FC = () => {
             <div className="text-center py-20">
                 <BuildingOfficeIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-600">Nenhuma obra vinculada</h2>
-                <p className="text-gray-500">Solicite à diretoria o acesso às suas obras.</p>
+                <p className="text-gray-500">Solicite ao administrador o acesso às suas obras.</p>
             </div>
         )
     }
@@ -300,8 +310,8 @@ const App: React.FC = () => {
   
   const BottomNav: React.FC = () => {
     const navItems = [
-      { view: 'SITES_LIST' as View, label: 'Obras', icon: BuildingOfficeIcon, roles: ['admin', 'manager', 'assistant', 'viewer'] },
-      { view: 'MANAGEMENT_DASHBOARD' as View, label: 'Gerencial', icon: ChartPieIcon, roles: ['admin', 'manager'] },
+      { view: 'SITES_LIST' as View, label: 'Obras', icon: BuildingOfficeIcon, roles: ['admin', 'director', 'manager', 'assistant', 'viewer'] },
+      { view: 'MANAGEMENT_DASHBOARD' as View, label: 'Gerencial', icon: ChartPieIcon, roles: ['admin', 'director', 'manager'] },
       { view: 'ADMIN_PANEL' as View, label: 'Admin', icon: WrenchScrewdriverIcon, roles: ['admin'] },
     ];
     

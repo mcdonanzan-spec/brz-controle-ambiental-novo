@@ -175,13 +175,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ projects, onRefreshData }) => {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Perfil</label>
-                                <div className="flex space-x-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {[
-                                        { id: 'assistant', label: 'Assistente (Meio Ambiente)' },
-                                        { id: 'manager', label: 'Engenheiro Gerente' },
-                                        { id: 'admin', label: 'Diretoria (Admin)' },
+                                        { id: 'assistant', label: 'Assistente (Operacional / Checklist)' },
+                                        { id: 'manager', label: 'Engenheiro Gerente (Validação)' },
+                                        { id: 'director', label: 'Diretoria (Visualização Global)' },
+                                        { id: 'admin', label: 'Administrador do Sistema (Master)' },
                                     ].map((role) => (
-                                        <label key={role.id} className="flex items-center cursor-pointer">
+                                        <label key={role.id} className="flex items-center cursor-pointer p-2 border rounded bg-gray-50 hover:bg-gray-100">
                                             <input 
                                                 type="radio" 
                                                 name="newRole" 
@@ -190,15 +191,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ projects, onRefreshData }) => {
                                                 onChange={(e) => setNewUserRole(e.target.value as UserRole)}
                                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                                             />
-                                            <span className="ml-2 text-sm text-gray-700">{role.label}</span>
+                                            <span className="ml-2 text-sm font-semibold text-gray-700">{role.label}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
 
-                            {newUserRole !== 'admin' && (
+                            {(newUserRole !== 'admin' && newUserRole !== 'director') && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Vincular Obras (Opcional)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Vincular Obras</label>
                                     <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200">
                                         {projects.map(proj => (
                                             <button
@@ -257,16 +258,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ projects, onRefreshData }) => {
                                                         <select 
                                                             value={user.role} 
                                                             onChange={(e) => handleUpdateUser(user.id, { role: e.target.value as any })}
-                                                            className="block w-48 pl-3 pr-8 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm"
+                                                            className="block w-64 pl-3 pr-8 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm"
                                                         >
-                                                            <option value="assistant">Assistente (Meio Ambiente)</option>
+                                                            <option value="assistant">Assistente (Operacional)</option>
                                                             <option value="manager">Engenheiro Gerente</option>
-                                                            <option value="admin">Diretoria (Admin)</option>
-                                                            <option value="viewer">Visitante (Leitura)</option>
+                                                            <option value="director">Diretoria (Visualização)</option>
+                                                            <option value="admin">Administrador (Master)</option>
                                                         </select>
                                                     </div>
                                                     
-                                                    {user.role !== 'admin' && (
+                                                    {(user.role !== 'admin' && user.role !== 'director') && (
                                                         <div className="flex flex-col items-end">
                                                             <div className="flex flex-wrap gap-1 justify-end mt-1">
                                                                 {projects.map(proj => {

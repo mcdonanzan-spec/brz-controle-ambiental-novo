@@ -71,8 +71,9 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
 
   const latestReport = reports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
   const isLatestReportCompleted = latestReport?.status === 'Completed';
+  
+  // Admin, Manager e Assistant podem criar/editar. Director é apenas visualização.
   const canCreateOrEdit = userRole === 'admin' || userRole === 'assistant' || userRole === 'manager'; 
-  // Manager can also edit to sign
 
   const getCategoryStatus = (categoryId: string) => {
       if (!latestReport) return { isComplete: false };

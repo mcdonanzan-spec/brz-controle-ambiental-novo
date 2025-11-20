@@ -70,7 +70,8 @@ export interface ChecklistCategory {
   subCategories: ChecklistSubCategory[];
 }
 
-export type UserRole = 'admin' | 'manager' | 'assistant' | 'viewer';
+// Adicionado 'director' como role distinta
+export type UserRole = 'admin' | 'director' | 'manager' | 'assistant' | 'viewer';
 
 export interface UserProfile {
   id: string;

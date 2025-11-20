@@ -174,7 +174,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ projects, onRefreshData }) => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Definir Cargo</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Perfil</label>
                                 <div className="flex space-x-4">
                                     {[
                                         { id: 'assistant', label: 'Assistente (Meio Ambiente)' },
@@ -253,7 +253,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ projects, onRefreshData }) => {
                                                 
                                                 <div className="flex flex-col gap-2 md:w-2/3">
                                                     <div className="flex items-center gap-2 justify-end">
-                                                        <label className="text-xs font-semibold uppercase text-gray-500">Cargo:</label>
+                                                        <label className="text-xs font-semibold uppercase text-gray-500">Perfil:</label>
                                                         <select 
                                                             value={user.role} 
                                                             onChange={(e) => handleUpdateUser(user.id, { role: e.target.value as any })}

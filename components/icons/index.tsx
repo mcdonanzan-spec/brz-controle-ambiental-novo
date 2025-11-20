@@ -64,74 +64,9 @@ export const LogoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 export const MascotIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" {...props}>
-    {/* 
-      Mascot: "Zeca"
-      Description: Brick body, Yellow Helmet, Grey Vest with Recycle Symbol, 
-      Boots, Holding a Broom, Thumbs Up.
-    */}
-    
-    {/* Broom Stick (Behind) */}
-    <rect x="150" y="10" width="10" height="180" fill="#8B4513" rx="2" />
-    
-    {/* Broom Bristles */}
-    <path d="M135 150 L 175 150 L 185 190 L 125 190 Z" fill="#DAA520" />
-    <path d="M135 150 L 175 150 L 185 190 L 125 190 Z" fill="none" stroke="#B8860B" strokeWidth="1" />
-    
-    {/* Boots */}
-    <path d="M60 170 L 60 190 L 80 190 L 80 180 C 80 175 70 170 60 170 Z" fill="#374151" /> {/* Left Boot */}
-    <path d="M100 170 L 100 190 L 120 190 L 120 180 C 120 175 110 170 100 170 Z" fill="#374151" /> {/* Right Boot */}
-
-    {/* Body (Brick) */}
-    <rect x="50" y="60" width="80" height="110" rx="5" fill="#A3A3A3" />
-    <rect x="50" y="60" width="80" height="110" rx="5" fill="url(#noise)" fillOpacity="0.3" />
-    
-    {/* Texture definition */}
-    <defs>
-        <filter id="noise">
-            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
-        </filter>
-    </defs>
-
-    {/* Vest (Grey with Yellow stripe) */}
-    <path d="M50 90 L 50 150 L 130 150 L 130 90 L 110 60 L 70 60 Z" fill="#4B5563" />
-    <rect x="50" y="130" width="80" height="15" fill="#FCD34D" /> {/* Yellow Reflective Stripe */}
-    
-    {/* Recycle Symbol on Vest */}
-    <g transform="translate(78, 100) scale(0.6)">
-        <path d="M12.83,11.17L7.5,16.5l5.33,5.33h12.5l-4.17-7.5l-4.17-7.5H12.83z M26.17,16.5l5.33-5.33l-5.33-5.33h-12.5l4.17,7.5l4.17,7.5H26.17z M19.5,29.83l-5.33,5.33l5.33,5.33h12.5l-4.17-7.5l-4.17-7.5H19.5z" fill="#22C55E"/>
-        <path d="M 15 5 L 10 15 L 20 15 Z" fill="#22C55E" transform="rotate(0 15 15) translate(0 -10)" opacity="0.8"/>
-        <path d="M 15 5 L 10 15 L 20 15 Z" fill="#22C55E" transform="rotate(120 15 15) translate(0 -10)" opacity="0.8"/>
-        <path d="M 15 5 L 10 15 L 20 15 Z" fill="#22C55E" transform="rotate(240 15 15) translate(0 -10)" opacity="0.8"/>
-    </g>
-
-    {/* Arms (Grey) */}
-    <path d="M50 80 L 30 100" stroke="#A3A3A3" strokeWidth="12" strokeLinecap="round"/>
-    <path d="M130 80 L 150 90" stroke="#A3A3A3" strokeWidth="12" strokeLinecap="round"/>
-
-    {/* Hands (Gloves) */}
-    <circle cx="150" cy="90" r="8" fill="#374151"/> {/* Holding Broom */}
-    <circle cx="30" cy="100" r="8" fill="#374151"/> 
-    {/* Thumbs Up */}
-    <path d="M30 100 L 30 90" stroke="#374151" strokeWidth="5" strokeLinecap="round" />
-
-    {/* Helmet */}
-    <path d="M50 60 Q 90 20 130 60" fill="#FCD34D" />
-    <rect x="80" y="40" width="20" height="5" rx="1" fill="white" opacity="0.8" /> {/* Reflection */}
-    <path d="M45 60 L 135 60" stroke="#FCD34D" strokeWidth="4" strokeLinecap="round"/> {/* Rim */}
-    
-    {/* Face */}
-    <g transform="translate(0, 10)">
-        <circle cx="75" cy="75" r="5" fill="white"/>
-        <circle cx="75" cy="75" r="2" fill="black"/>
-        
-        <circle cx="105" cy="75" r="5" fill="white"/>
-        <circle cx="105" cy="75" r="2" fill="black"/>
-        
-        <path d="M80 85 Q 90 92 100 85" stroke="#374151" strokeWidth="2" fill="none" strokeLinecap="round"/>
-    </g>
-
-  </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
+    </svg>
 );
 
 export const BuildingOfficeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (

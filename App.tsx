@@ -11,7 +11,7 @@ import ReportForm from './components/ReportForm';
 import ReportView from './components/ReportView';
 import PendingActions from './components/PendingActions';
 import Toast from './components/Toast';
-import { LogoIcon, MascotIcon, ChartPieIcon, BuildingOfficeIcon, UserCircleIcon, WrenchScrewdriverIcon } from './components/icons';
+import { LogoIcon, ChartPieIcon, BuildingOfficeIcon, UserCircleIcon, WrenchScrewdriverIcon } from './components/icons';
 
 type View = 'SITES_LIST' | 'PROJECT_DASHBOARD' | 'REPORT_FORM' | 'REPORT_VIEW' | 'MANAGEMENT_DASHBOARD' | 'PENDING_ACTIONS' | 'ADMIN_PANEL';
 
@@ -169,9 +169,9 @@ const App: React.FC = () => {
     
     return (
     <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-40">
-      <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('SITES_LIST')}>
-        <MascotIcon className="h-12 w-auto" />
-        <LogoIcon className="h-10 w-auto" />
+      <div className="flex items-center space-x-4 cursor-pointer" onClick={() => setView('SITES_LIST')}>
+        <LogoIcon className="h-14 w-auto" />
+        <div className="h-10 w-px bg-gray-300 hidden sm:block"></div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 hidden sm:block uppercase tracking-tight">CONTROLE AMBIENTAL</h1>
       </div>
       <div className="hidden md:block text-md font-semibold text-gray-700">

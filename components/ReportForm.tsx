@@ -1,8 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan, UserProfile } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
 import { getNewReportTemplate } from '../services/dbApi';
-import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon, FingerPrintIcon, ShieldCheckIcon, UserCircleIcon } from './icons';
+import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon, FingerPrintIcon, ShieldCheckIcon, UserCircleIcon, ExclamationTriangleIcon } from './icons';
 
 interface ReportFormProps {
   project: Project;
@@ -178,8 +179,19 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
           handleResultChange(itemId, { actionPlan: { ...result.actionPlan!, ...newPlan } });
       }
   }
+
+  const validateForSignature = () => {
+      const unanswered = reportData.results.filter(r => r.status === null);
+      if (unanswered.length > 0) {
+          const count = unanswered.length;
+          alert(`Atenção: Existem ${count} itens sem resposta no checklist. Todos os itens devem ser inspecionados (Conforme, Não Conforme ou Não Aplicável) antes de assinar.`);
+          return false;
+      }
+      return true;
+  }
   
   const initiateSignature = (role: 'inspector' | 'manager') => {
+      if(!validateForSignature()) return;
       setSigningRole(role);
       setShowGovLogin(true);
   }
@@ -203,6 +215,20 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
     if (isReadOnly) return;
     
     if (status === 'Completed') {
+        // Validação de completude
+        const unanswered = reportData.results.filter(r => r.status === null);
+        if (unanswered.length > 0) {
+            alert(`Não é possível concluir o relatório com itens pendentes de avaliação.`);
+            return;
+        }
+        
+        // Validação de NC
+        const pendingNc = reportData.results.filter(r => r.status === InspectionStatus.NC && (!r.actionPlan?.actions || r.actionPlan.actions.trim() === ''));
+        if (pendingNc.length > 0) {
+            alert("Existem itens Não Conformes sem Plano de Ação (Tratativa) definido. Preencha o campo 'Ações / Provisões' para todos os itens em vermelho.");
+            return;
+        }
+
         if (!reportData.signatures.inspector) {
             alert("A assinatura do Responsável Ambiental é obrigatória para concluir.");
             return;
@@ -243,9 +269,17 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
     const isNC = result.status === InspectionStatus.NC;
 
     return (
-      <div key={item.id} id={`item-${item.id}`} className="py-4 border-b border-gray-200 last:border-b-0 scroll-mt-20">
+      <div key={item.id} id={`item-${item.id}`} className={`py-4 border-b border-gray-200 last:border-b-0 scroll-mt-20 ${result.previousNc ? 'bg-orange-50 -mx-4 px-4' : ''}`}>
         <div className="flex justify-between items-start gap-4">
-            <p className="flex-1 font-medium text-gray-800 pt-1.5">{(index + 1).toString().padStart(2, '0')}. {item.text}</p>
+            <div className="flex-1">
+                {result.previousNc && (
+                     <div className="flex items-center text-orange-600 text-xs font-bold uppercase mb-1">
+                         <ExclamationTriangleIcon className="h-3 w-3 mr-1"/>
+                         Pendência Anterior
+                     </div>
+                )}
+                <p className="font-medium text-gray-800 pt-1.5">{(index + 1).toString().padStart(2, '0')}. {item.text}</p>
+            </div>
             <div className="flex space-x-2">
                 <StatusButton result={result} itemId={item.id} status={InspectionStatus.C} icon={CheckIcon} color="green"/>
                 <StatusButton result={result} itemId={item.id} status={InspectionStatus.NC} icon={XMarkIcon} color="red"/>
@@ -266,11 +300,11 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                     <PhotoUploader photos={result.photos} onAddPhoto={(photo) => handleAddPhoto(item.id, photo)} onRemovePhoto={(photoId) => handleRemovePhoto(item.id, photoId)} disabled={isReadOnly} />
                 </div>
                  <div>
-                    <h4 className="font-semibold text-red-800 text-sm">Plano de Ação Corretiva</h4>
+                    <h4 className="font-semibold text-red-800 text-sm">Plano de Ação Corretiva (Tratativa Obrigatória)</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                        <input type="text" placeholder="Ações / Provisões" value={result.actionPlan?.actions} onChange={(e) => handleActionPlanChange(item.id, {actions: e.target.value})} disabled={isReadOnly} className="p-2 border rounded-md text-sm disabled:bg-gray-100"/>
+                        <input type="text" placeholder="Ações / Provisões (Obrigatório)" value={result.actionPlan?.actions} onChange={(e) => handleActionPlanChange(item.id, {actions: e.target.value})} disabled={isReadOnly} className="p-2 border rounded-md text-sm disabled:bg-gray-100 border-red-200 focus:border-red-500"/>
                         <input type="text" placeholder="Responsável" value={result.actionPlan?.responsible} onChange={(e) => handleActionPlanChange(item.id, {responsible: e.target.value})} disabled={isReadOnly} className="p-2 border rounded-md text-sm disabled:bg-gray-100"/>
-                        <input type="date" placeholder="Prazo" value={result.actionPlan?.deadline} onChange={(e) => handleActionPlanChange(item.id, {deadline: e.target.value})} disabled={isReadOnly} className="p-2 border rounded-md text-sm disabled:bg-gray-100"/>
+                        <input type="date" placeholder="Prazo Limite" title="Prazo Limite" value={result.actionPlan?.deadline} onChange={(e) => handleActionPlanChange(item.id, {deadline: e.target.value})} disabled={isReadOnly} className="p-2 border rounded-md text-sm disabled:bg-gray-100"/>
                     </div>
                 </div>
             </div>
@@ -334,6 +368,10 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                 <div id="signatures" className="animate-fade-in">
                     <h3 className="text-xl font-semibold text-gray-700 mb-4 bg-gray-100 p-3 rounded-lg">Assinaturas Digitais</h3>
                     <p className="text-sm text-gray-500 my-4">A assinatura eletrônica garante a autenticidade deste documento. Utilize sua conta gov.br para assinar.</p>
+                    
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded mb-6 text-sm text-blue-800">
+                         <strong>Nota do Sistema:</strong> A assinatura só será habilitada após o preenchimento de 100% dos itens do checklist (Conforme, Não Conforme ou Não Aplicável).
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Assinatura Inspetor */}

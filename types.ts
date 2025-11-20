@@ -27,6 +27,7 @@ export interface InspectionItemResult {
   photos: Photo[];
   comment: string;
   actionPlan?: ActionPlan;
+  previousNc?: boolean; // Indica se este item foi NC no relatório anterior
 }
 
 export interface Report {

@@ -197,9 +197,24 @@ export const upsertReport = async (reportData: Omit<Report, 'id' | 'score' | 'ev
   return fullReportData;
 };
 
-export const getNewReportTemplate = (projectId: string, inspectorName: string, inspectorId: string): Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> => {
+export const getNewReportTemplate = (
+    projectId: string, 
+    inspectorName: string, 
+    inspectorId: string,
+    previousReport?: Report | null
+): Omit<Report, 'id' | 'score' | 'evaluation' | 'categoryScores'> => {
   const allItems = CHECKLIST_DEFINITIONS.flatMap(cat => cat.subCategories.flatMap(sub => sub.items));
   
+  // Identifica itens que foram NC no último relatório
+  const previousNcMap = new Map<string, boolean>();
+  if (previousReport) {
+      previousReport.results.forEach(res => {
+          if (res.status === InspectionStatus.NC) {
+              previousNcMap.set(res.itemId, true);
+          }
+      });
+  }
+
   const results: InspectionItemResult[] = allItems.map(item => ({
     itemId: item.id,
     status: null,
@@ -210,7 +225,8 @@ export const getNewReportTemplate = (projectId: string, inspectorName: string, i
       responsible: '',
       deadline: '',
       resources: { fin: false, mo: false, adm: false }
-    }
+    },
+    previousNc: previousNcMap.has(item.id) // Marca se é pendência antiga
   }));
 
   return {

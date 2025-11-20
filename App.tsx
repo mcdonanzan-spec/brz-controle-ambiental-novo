@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [initialCategoryId, setInitialCategoryId] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string>('');
+  const [newReportTemplate, setNewReportTemplate] = useState<any>(null); // Estado para segurar o template gerado
 
   const checkUser = async () => {
       setIsLoading(true);
@@ -110,6 +111,15 @@ const App: React.FC = () => {
   };
 
   const handleCreateNewReport = (project: Project) => {
+    // Busca o último relatório desta obra para identificar pendências
+    const projectReports = reports.filter(r => r.projectId === project.id);
+    const lastReport = projectReports.length > 0 
+        ? projectReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] 
+        : null;
+
+    const template = getNewReportTemplate(project.id, userProfile?.full_name || 'Desconhecido', userProfile?.id || '', lastReport);
+    
+    setNewReportTemplate(template);
     setEditingReport(null);
     setSelectedProject(project);
     setInitialCategoryId(undefined);
@@ -117,6 +127,7 @@ const App: React.FC = () => {
   };
   
   const handleEditReport = (report: Report) => {
+    setNewReportTemplate(null);
     setEditingReport(report);
     setSelectedProject(projects.find(p => p.id === report.projectId) || null);
     setInitialCategoryId(undefined);
@@ -124,6 +135,7 @@ const App: React.FC = () => {
   }
   
   const handleEditReportCategory = (report: Report, categoryId: string) => {
+    setNewReportTemplate(null);
     setEditingReport(report);
     setSelectedProject(projects.find(p => p.id === report.projectId) || null);
     setInitialCategoryId(categoryId);
@@ -276,7 +288,8 @@ const App: React.FC = () => {
         return (
           <ReportForm
             project={selectedProject}
-            existingReport={editingReport}
+            // Passa o template novo se não estiver editando um existente
+            existingReport={editingReport || newReportTemplate} 
             userProfile={userProfile!}
             onSave={(data, status) => handleAsyncSave(data, status)}
             onCancel={() => selectedProject ? setView('PROJECT_DASHBOARD') : navigateToSitesList()}

@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Project, Report, InspectionStatus, ChecklistItem, InspectionItemResult, Photo, ActionPlan, UserProfile } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
 import { getNewReportTemplate } from '../services/dbApi';
-import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon, DocumentCheckIcon, MinusIcon, UserCircleIcon, ExclamationTriangleIcon } from './icons';
+import { CameraIcon, CheckIcon, PaperAirplaneIcon, XMarkIcon, DocumentCheckIcon, MinusIcon, UserCircleIcon, ExclamationTriangleIcon, ConcreteMixerIcon, WastePipeIcon, HardHatIcon, OilBarrelIcon, GasPumpIcon } from './icons';
 
 interface ReportFormProps {
   project: Project;
@@ -214,11 +214,11 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
   const activeCategory = CHECKLIST_DEFINITIONS.find(c => c.id === activeCategoryId);
 
   const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
-    massa: CubeTransparentIcon,
-    efluentes: FunnelIcon,
-    campo: WrenchScrewdriverIcon,
-    quimicos: BeakerIcon,
-    combustivel: FireIcon,
+    massa: ConcreteMixerIcon,
+    efluentes: WastePipeIcon,
+    campo: HardHatIcon,
+    quimicos: OilBarrelIcon,
+    combustivel: GasPumpIcon,
     signatures: DocumentCheckIcon
   };
 
@@ -249,7 +249,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
         <div className="w-64 bg-gray-50 border-r overflow-y-auto hidden md:block">
             <nav className="p-4 space-y-2">
                 {CHECKLIST_DEFINITIONS.map(cat => {
-                    const Icon = categoryIcons[cat.id] || CubeTransparentIcon;
+                    const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
                     const isActive = activeCategoryId === cat.id;
                     
                     const catItemIds = cat.subCategories.flatMap(s => s.items.map(i => i.id));
@@ -264,8 +264,8 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                             className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isActive ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                         >
                             <div className="flex items-center">
-                                <Icon className={`h-5 w-5 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                                <span className="text-sm font-medium">{cat.title.split(' ')[0]}...</span>
+                                <Icon className={`h-6 w-6 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                                <span className="text-sm font-medium text-left">{cat.title.split(' ')[0]}...</span>
                             </div>
                             {isComplete ? (
                                 <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -281,7 +281,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
         {/* Mobile Tabs */}
         <div className="md:hidden overflow-x-auto flex border-b bg-gray-50 flex-shrink-0">
              {CHECKLIST_DEFINITIONS.map(cat => {
-                 const Icon = categoryIcons[cat.id] || CubeTransparentIcon;
+                 const Icon = categoryIcons[cat.id] || ConcreteMixerIcon;
                  const isActive = activeCategoryId === cat.id;
                  return (
                     <button
@@ -301,7 +301,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
             {activeCategory && (
                 <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
                     <div className="flex items-center space-x-3 mb-6 border-b pb-4">
-                         {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-8 w-8 text-blue-600" })}
+                         {categoryIcons[activeCategory.id] && React.createElement(categoryIcons[activeCategory.id], { className: "h-10 w-10 text-blue-600" })}
                          <h2 className="text-2xl font-bold text-gray-800">{activeCategory.title}</h2>
                     </div>
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Project, Report, InspectionStatus, UserRole } from '../types';
 import { CHECKLIST_DEFINITIONS } from '../constants';
-import { ArrowLeftIcon, PlusIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon, CubeTransparentIcon, FunnelIcon, WrenchScrewdriverIcon, BeakerIcon, FireIcon } from './icons';
+import { ArrowLeftIcon, PlusIcon, DocumentCheckIcon, ClockIcon, CheckCircleIcon, ConcreteMixerIcon, WastePipeIcon, HardHatIcon, OilBarrelIcon, GasPumpIcon } from './icons';
 
 interface ProjectDashboardProps {
   project: Project;
@@ -15,11 +15,11 @@ interface ProjectDashboardProps {
 }
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
-    massa: CubeTransparentIcon,
-    efluentes: FunnelIcon,
-    campo: WrenchScrewdriverIcon,
-    quimicos: BeakerIcon,
-    combustivel: FireIcon,
+    massa: ConcreteMixerIcon,
+    efluentes: WastePipeIcon,
+    campo: HardHatIcon,
+    quimicos: OilBarrelIcon,
+    combustivel: GasPumpIcon,
     signatures: DocumentCheckIcon
 };
 
@@ -136,12 +136,12 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
                         const status = getCategoryStatus(category.id);
                         const Icon = categoryIcons[category.id];
                         return (
-                            <div key={category.id} onClick={() => onEditReportCategory(latestReport, category.id)} className="bg-white p-5 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer">
+                            <div key={category.id} onClick={() => onEditReportCategory(latestReport, category.id)} className="bg-white p-5 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 pr-2">
-                                        {Icon && <Icon className="h-10 w-10 text-gray-500 mb-3"/>}
+                                        {Icon && <Icon className="h-12 w-12 text-gray-600 group-hover:text-blue-600 transition-colors mb-3"/>}
                                         {/* Adicionado leading-tight para melhorar quebra de linha em titulos grandes como Efluentes */}
-                                        <h3 className="font-bold text-gray-800 text-lg leading-tight">{category.title}</h3>
+                                        <h3 className="font-bold text-gray-800 text-lg leading-tight group-hover:text-blue-700 transition-colors">{category.title}</h3>
                                     </div>
                                     <ScoreRing score={score} />
                                 </div>
@@ -151,7 +151,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
                                     ) : (
                                         <span className="flex items-center font-semibold text-yellow-600"><ClockIcon className="h-4 w-4 mr-1"/> Pendente</span>
                                     )}
-                                    <span className="text-gray-500">Ver detalhes →</span>
+                                    <span className="text-gray-500 group-hover:translate-x-1 transition-transform">Ver detalhes →</span>
                                 </div>
                             </div>
                         )
@@ -165,7 +165,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, reports, o
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Histórico de Inspeções</h2>
                   <ul className="space-y-3">
                     {reports.map(report => (
-                      <li key={report.id} onClick={() => onViewReport(report)} className="bg-gray-50 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                      <li key={report.id} onClick={() => onViewReport(report)} className="bg-gray-50 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors border border-transparent hover:border-blue-200">
                         <div className="flex justify-between items-center">
                           <div>
                             <p className="font-semibold text-gray-800">

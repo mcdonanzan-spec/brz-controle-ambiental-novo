@@ -328,42 +328,63 @@ const ReportForm: React.FC<ReportFormProps> = ({ project, existingReport, userPr
                                                 )}
                                             </div>
 
-                                            {/* Botões de Ação - Layout Clean / Horizontal */}
-                                            <div className="flex flex-wrap items-center gap-3 mb-3">
+                                            {/* Botões de Ação - Layout App Classic (Blocos com Ícones) */}
+                                            <div className="grid grid-cols-3 gap-4 mb-4">
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.C })}
                                                     disabled={isReadOnly}
-                                                    className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center text-sm font-bold border transition-all
-                                                        ${result.status === InspectionStatus.C 
-                                                            ? 'bg-green-100 border-green-500 text-green-800 ring-1 ring-green-500' 
-                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 hover:border-gray-400'}`}
+                                                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                                                        result.status === InspectionStatus.C 
+                                                        ? 'bg-green-50 border-green-500' 
+                                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                    }`}
                                                 >
-                                                    <CheckIcon className="h-5 w-5 mr-2" />
-                                                    Conforme
+                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                                                        result.status === InspectionStatus.C ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
+                                                    }`}>
+                                                        <CheckIcon className="h-6 w-6" />
+                                                    </div>
+                                                    <span className={`text-xs font-bold uppercase ${result.status === InspectionStatus.C ? 'text-green-700' : 'text-gray-500'}`}>
+                                                        Conforme
+                                                    </span>
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NC })}
                                                     disabled={isReadOnly}
-                                                    className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center text-sm font-bold border transition-all
-                                                        ${result.status === InspectionStatus.NC 
-                                                            ? 'bg-red-100 border-red-500 text-red-800 ring-1 ring-red-500' 
-                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 hover:border-gray-400'}`}
+                                                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                                                        result.status === InspectionStatus.NC 
+                                                        ? 'bg-red-50 border-red-500' 
+                                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                    }`}
                                                 >
-                                                    <XMarkIcon className="h-5 w-5 mr-2" />
-                                                    Não Conforme
+                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                                                        result.status === InspectionStatus.NC ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-400'
+                                                    }`}>
+                                                        <XMarkIcon className="h-6 w-6" />
+                                                    </div>
+                                                    <span className={`text-xs font-bold uppercase ${result.status === InspectionStatus.NC ? 'text-red-700' : 'text-gray-500'}`}>
+                                                        Não Conforme
+                                                    </span>
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleResultChange(item.id, { status: InspectionStatus.NA })}
                                                     disabled={isReadOnly}
-                                                    className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center text-sm font-bold border transition-all
-                                                        ${result.status === InspectionStatus.NA 
-                                                            ? 'bg-gray-200 border-gray-400 text-gray-800 ring-1 ring-gray-400' 
-                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 hover:border-gray-400'}`}
+                                                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                                                        result.status === InspectionStatus.NA 
+                                                        ? 'bg-gray-50 border-gray-500' 
+                                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                    }`}
                                                 >
-                                                    <MinusIcon className="h-5 w-5 mr-2" />
-                                                    N/A
+                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                                                        result.status === InspectionStatus.NA ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-400'
+                                                    }`}>
+                                                        <MinusIcon className="h-6 w-6" />
+                                                    </div>
+                                                    <span className={`text-xs font-bold uppercase ${result.status === InspectionStatus.NA ? 'text-gray-700' : 'text-gray-500'}`}>
+                                                        N/A
+                                                    </span>
                                                 </button>
                                             </div>
 
